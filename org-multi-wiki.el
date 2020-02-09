@@ -88,7 +88,7 @@ This should be the first element of one of the entries in
   :group 'org-multi-wiki)
 
 ;;;; Other variables
-(defvar org-multi-wiki-current-directory-id nil)
+(defvar org-multi-wiki-current-directory-id org-multi-wiki-default-directory-id)
 
 ;;;; Default functions
 (defun org-multi-wiki-default-escape-file-name-fn (heading)

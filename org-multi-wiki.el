@@ -92,7 +92,7 @@ This should be the first element of one of the entries in
   "Escape HEADING suitable for use in file name."
   (cl-labels ((filename-escape
                (str)
-               (s-replace-regexp (rx (not (any space alnum "-"))) "" str)))
+               (s-replace-regexp (rx (not (any space alnum ".-"))) "" str)))
     (let ((words (split-string heading " ")))
       (if (= 1 (length words))
           (filename-escape (car words))

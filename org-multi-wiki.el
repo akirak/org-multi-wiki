@@ -95,14 +95,14 @@ This should be the first element of one of the entries in
   "Escape HEADING suitable for use in file name."
   (cl-labels ((filename-escape
                (str)
-               (s-replace-regexp (rx (not (any space alnum ".-"))) "" str)))
-    (let ((words (split-string heading " ")))
+               (s-replace-regexp (rx (not (any alnum "." nonascii))) "" str)))
+    (let ((words (split-string heading (rx (any space "-_")))))
       (if (= 1 (length words))
           (filename-escape (car words))
-        (-> words
-            (-map #'filename-escape)
-            (-map #'s-upper-camel-case)
-            (string-join))))))
+        (->> words
+             (-map #'filename-escape)
+             (-map #'s-upper-camel-case)
+             (string-join))))))
 
 (defun org-multi-wiki-default-entry-template-fn (heading)
   "Generate an Org entry from HEADING."

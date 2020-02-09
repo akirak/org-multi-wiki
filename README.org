@@ -17,29 +17,36 @@ It uses alphapapa's [[https://github.com/alphapapa/org-ql][helm-org-ql]] for sea
 -  [[#license][License]]
 
 ** Features
-- Org links are intact in this package, but hopefully it will support a reliable referencing system in the future.
+- Capable of running multiple wikis simultaneously inside a single Emacs session. You can search contents from multiple directories, and you can create a new entry in any of the directory.
+- Using =helm-org-ql= for searching entries.
+
+Org links are intact in this package now, but hopefully it will support a reliable referencing system in the future.
 ** Installation
 This package is not available on MELPA yet.
 
 Clone this repository to your local machine, and install the following dependencies:
 
 - dash
-- [[https://github.com/alphapapa/org-ql][helm-org-ql]], if you use helm-org-multi-wiki
+- [[https://github.com/alphapapa/org-ql][helm-org-ql]], if you use helm-org-multi-wiki (recommended)
 ** Configuration
+Below is an example configuration through =use-package=:
+
+#+begin_src emacs-lisp
+  (use-package org-multi-wiki
+    :custom
+    (org-multi-wiki-directories '((default "~/org/")
+                                  (project1 "~/projects/project1/project1-docs")))
+    ;; ID of the initial current wiki
+    (org-multi-wiki-default-directory-id 'default))
+
+  (use-package helm-org-multi-wiki)
+ #+end_src
+
 First configure =org-multi-wiki-directories= variable.
 It is a list where each item is a list of the following items:
 
 - A symbol to identify the wiki
 - A directory containing Org files
-
- #+begin_src emacs-lisp
-   (use-package org-multi-wiki
-     :custom
-     (org-multi-wiki-directories '((default "~/org/")
-                                   (project1 "~/projects/project1/project1-docs"))))
-
-   (use-package helm-org-multi-wiki)
- #+end_src
 
 For more options, see =org-multi-wiki= customization group.
 ** Usage
@@ -67,8 +74,19 @@ You can define your own command to search queries in a specific wiki.
 #+end_src
 
 When multiple wikis are given, you can select a directory in which you want to create a new file.
+This is available as alternative actions (~tab~) in the dummy source of Helm.
 
 The package also provides =helm-org-multi-wiki-all=, which performs search on all wikis.
+** Alternatives
+There are several knowledge base systems for Emacs based on Org mode.
+
+[[https://github.com/Kungsgeten/org-brain][org-brain]] and [[https://github.com/jethrokuan/org-roam][org-roam]] are especially powerful ones.
+org-brain is based on the idea of concept mapping, and org-roam is a rudimentary replica of another software named Roam.
+org-multi-wiki is not based on such a specific idea.
+It is a set of hacks to implement a wiki system on top of Helm and Org mode, so it is smaller and can be used in broader situations.
+
+[[https://github.com/abo-abo/plain-org-wiki][plain-org-wiki]] is the direct inspiration of this package.
+org-multi-wiki supports multiple wiki directories and takes advantage of =helm= and =org-ql= for providing a rich querying interface.
 ** License
 GPLv3
 ** COMMENT Meta :noexport:

@@ -1,3 +1,5 @@
+;;; -*- lexical-binding: t -*-
+
 (require 'buttercup)
 (require 'org-multi-wiki)
 

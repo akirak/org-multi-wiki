@@ -17,6 +17,7 @@ It uses alphapapa's [[https://github.com/alphapapa/org-ql][helm-org-ql]] for sea
 -  [[#usage][Usage]]
   -  [[#switching-the-current-wiki][Switching the current wiki]]
   -  [[#helm-org-multi-wiki][helm-org-multi-wiki]]
+-  [[#license][License]]
 
 ** Features
 - Org links are intact in this package, but hopefully it will support a reliable referencing system in the future.
@@ -71,6 +72,8 @@ You can define your own command to search queries in a specific wiki.
 When multiple wikis are given, you can select a directory in which you want to create a new file.
 
 The package also provides =helm-org-multi-wiki-all=, which performs search on all wikis.
+** License
+GPLv3
 ** COMMENT Meta :noexport:
 :PROPERTIES:
 :TOC:      ignore

@@ -4,7 +4,7 @@
 
 ;; Author: Akira Komamura <akira.komamura@gmail.com>
 ;; Version: 0.1
-;; Package-Requires: ((emacs "25.1") (dash "2.12"))
+;; Package-Requires: ((emacs "25.1") (dash "2.12") (s "1.12"))
 ;; Keywords: org outlines files
 ;; URL: https://github.com/akirak/org-multi-wiki
 
@@ -36,6 +36,9 @@
 
 ;;; Code:
 
+(require 'subr-x)
+(require 'dash)
+(require 's)
 (require 'org)
 
 (defgroup org-multi-wiki nil
@@ -128,9 +131,10 @@ This should be the first element of one of the entries in
 (defun org-multi-wiki-switch (id)
   "Set the current wiki to ID."
   (interactive (list (org-multi-wiki-select-directory-id)))
-  (when-let ((dir (org-multi-wiki-directory id)))
+  (when-let (dir (org-multi-wiki-directory id))
     (setq org-multi-wiki-current-directory-id id)
-    (message "Set the current wiki to \"%s\" (%s)" id dir)))
+    (message "Set the current wiki to \"%s\" (%s)" id
+             org-multi-wiki-current-directory-id)))
 
 ;;;###autoload
 (cl-defun org-multi-wiki-visit-entry (heading &key id)
@@ -144,7 +148,7 @@ This should be the first element of one of the entries in
       ;; Set default-directory to allow directory-specific templates
       (let ((default-directory dir))
         (with-temp-buffer
-          (insert (org-multi-wiki-template heading))
+          (insert (funcall org-multi-wiki-entry-template-fn heading))
           (write-file fpath))))
     (funcall org-multi-wiki-find-file-fn fpath)))
 

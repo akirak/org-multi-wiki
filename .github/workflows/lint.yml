@@ -38,3 +38,4 @@ jobs:
         nix-build --arg emacs "(import <emacs-ci>).${{ matrix.emacs-version }}" -A $PACKAGE.byte-compile --no-out-link --quiet ci.nix
         nix-build --arg emacs "(import <emacs-ci>).${{ matrix.emacs-version }}" -A $PACKAGE.checkdoc --no-out-link --quiet ci.nix
         nix-shell --arg emacs "(import <emacs-ci>).${{ matrix.emacs-version }}" -A $PACKAGE.package-lint --pure --quiet ci.nix
+        nix-shell --arg emacs "(import <emacs-ci>).${{ matrix.emacs-version }}" -A $PACKAGE.buttercup --pure --quiet ci.nix

@@ -144,7 +144,7 @@ This should be the first element of one of the entries in
       ;; Set default-directory to allow directory-specific templates
       (let ((default-directory dir))
         (with-temp-buffer
-          (insert (org-multi-wiki-template heading))
+          (insert (funcall org-multi-wiki-entry-template-fn heading))
           (write-file fpath))))
     (funcall org-multi-wiki-find-file-fn fpath)))
 

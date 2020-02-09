@@ -3,10 +3,7 @@ This is a small wiki package for Emacs.
 Unlike other known existing solutions, this package supports multiple wikis on a single machine.
 It uses alphapapa's [[https://github.com/alphapapa/org-ql][helm-org-ql]] for searching, which makes navigation and entry creation seamless.
 
-# Add CI badges here
-
-#+BEGIN_HTML
-#+END_HTML
+[[https://github.com/akirak/org-multi-wiki/workflows/lint/badge.svg?branch=master][https://github.com/akirak/org-multi-wiki/workflows/lint/badge.svg?branch=master]]
 ** Table of contents
 :PROPERTIES:
 :TOC: siblings

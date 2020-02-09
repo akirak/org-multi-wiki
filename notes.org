@@ -1,0 +1,4 @@
+* [#A] Add a link type
+:PROPERTIES:
+:CREATED_TIME: [2020-02-09 Sun 16:01]
+:END:

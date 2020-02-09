@@ -1,0 +1,81 @@
+* org-multi-wiki
+This is a small wiki package for Emacs.
+Unlike other known existing solutions, this package supports multiple wikis on a single machine.
+It uses alphapapa's [[https://github.com/alphapapa/org-ql][helm-org-ql]] for searching, which makes navigation and entry creation seamless.
+
+# Add CI badges here
+
+#+BEGIN_HTML
+#+END_HTML
+** Table of contents
+:PROPERTIES:
+:TOC: siblings
+:END:
+-  [[#features][Features]]
+-  [[#installation][Installation]]
+-  [[#configuration][Configuration]]
+-  [[#usage][Usage]]
+  -  [[#switching-the-current-wiki][Switching the current wiki]]
+  -  [[#helm-org-multi-wiki][helm-org-multi-wiki]]
+
+** Features
+- Org links are intact in this package, but hopefully it will support a reliable referencing system in the future.
+** Installation
+This package is not available on MELPA yet.
+
+Clone this repository to your local machine, and install the following dependencies:
+
+- dash
+- [[https://github.com/alphapapa/org-ql][helm-org-ql]], if you use helm-org-multi-wiki
+** Configuration
+First configure =org-multi-wiki-directories= variable.
+It is a list where each item is a list of the following items:
+
+- A symbol to identify the wiki
+- A directory containing Org files
+
+ #+begin_src emacs-lisp
+   (use-package org-multi-wiki
+     :custom
+     (org-multi-wiki-directories '((default "~/org/")
+                                   (project1 "~/projects/project1/project1-docs"))))
+
+   (use-package helm-org-multi-wiki)
+ #+end_src
+
+For more options, see =org-multi-wiki= customization group.
+** Usage
+*** Switching the current wiki
+This package supports a notion of /current wiki/.
+To switch the wiki, use =org-multi-wiki-switch=.
+Optionally, you can work on a specific wiki by calling functions with an ID.
+*** helm-org-multi-wiki
+=helm-org-multi-wiki= command is the main entry point in this package.
+It uses [[https://github.com/alphapapa/org-ql#helm-org-ql][helm-org-ql]] for search and a dummy source for entry creation.
+It is included in =helm-org-multi-wiki.el=.
+
+By default, it lets you select a heading or create a new entry in the current wiki.
+
+With a universal prefix argument (~C-u~), you can select wikis.
+You can select multiple wikis with ~C-SPC~.
+
+You can also use it as a function which accepts an ID or a list of IDs.
+You can define your own command to search queries in a specific wiki.
+
+#+begin_src emacs-lisp
+  (defun helm-org-multi-wiki-project1 ()
+    (interactive)
+    (helm-org-multi-wiki '(project1)))
+#+end_src
+
+When multiple wikis are given, you can select a directory in which you want to create a new file.
+
+The package also provides =helm-org-multi-wiki-all=, which performs search on all wikis.
+** COMMENT Meta :noexport:
+:PROPERTIES:
+:TOC:      ignore
+:END:
+# The COMMENT keyword prevents GitHub's renderer from showing this entry.
+# Local Variables:
+# eval: (when (require (quote org-make-toc) nil t) (org-make-toc-mode t))
+# End:

@@ -91,8 +91,8 @@ When FIRST is given, it is the default target of entry creation."
                                                (if (equal id first)
                                                    " (current)"
                                                  ""))
-                                       `(lambda (inp)
-                                          (org-multi-wiki-visit-entry inp :id ,id))))
+                                       (lambda (inp)
+                                         (org-multi-wiki-visit-entry inp :id id))))
                                (if (and first (> (length ids) 1))
                                    (cons first (-remove-item first ids))
                                  ids)))))))))

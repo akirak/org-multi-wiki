@@ -67,7 +67,7 @@ This should be the first element of one of the entries in
   :type 'symbol
   :group 'org-multi-wiki)
 
-(defcustom org-multi-wiki-escape-file-name-fn #'org-multi-wiki-default-escape-file-name-fn
+(defcustom org-multi-wiki-escape-file-name-fn #'org-multi-wiki-escape-file-name-camelcase-1
   "Function used to generated an escaped file name from a heading."
   :type 'function
   :group 'org-multi-wiki)
@@ -91,12 +91,12 @@ This should be the first element of one of the entries in
 (defvar org-multi-wiki-current-directory-id org-multi-wiki-default-directory-id)
 
 ;;;; Default functions
-(defun org-multi-wiki-default-escape-file-name-fn (heading)
+(defun org-multi-wiki-escape-file-name-camelcase-1 (heading)
   "Escape HEADING suitable for use in file name."
   (cl-labels ((filename-escape
                (str)
-               (s-replace-regexp (rx (not (any alnum "." nonascii))) "" str)))
-    (let ((words (split-string heading (rx (any space "-_")))))
+               (s-replace-regexp (rx (not (any alnum "-._" nonascii))) "" str)))
+    (let ((words (split-string heading (rx (any space)))))
       (if (= 1 (length words))
           (filename-escape (car words))
         (->> words

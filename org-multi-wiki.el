@@ -4,7 +4,7 @@
 
 ;; Author: Akira Komamura <akira.komamura@gmail.com>
 ;; Version: 0.1
-;; Package-Requires: ((emacs "25.1") (dash "2.12") (s "1.12"))
+;; Package-Requires: ((emacs "26.1") (dash "2.12") (s "1.12") (org-ql "0.4"))
 ;; Keywords: org outlines files
 ;; URL: https://github.com/akirak/org-multi-wiki
 
@@ -40,6 +40,9 @@
 (require 'dash)
 (require 's)
 (require 'org)
+(require 'ol)
+
+(declare-function 'org-ql-select "ext:org-ql")
 
 (defgroup org-multi-wiki nil
   "Multiple wikis based on org-mode."
@@ -141,6 +144,28 @@ file name."
   (intern (completing-read (or prompt "Wiki: ")
                            (mapcar #'car org-multi-wiki-directories))))
 
+(defun org-multi-wiki-entry-file-p (&optional file)
+  "Check if FILE is a wiki entry.
+
+If the file is a wiki entry, this functions returns a plist."
+  (let* ((file (or file (buffer-file-name (or (org-base-buffer (current-buffer))
+                                              (current-buffer)))))
+         (directory (file-name-directory file))
+         root-directory sans-extension id)
+    (and (-any (lambda (extension)
+                 (when (string-suffix-p extension file)
+                   (setq sans-extension (string-remove-suffix extension file))))
+               org-multi-wiki-file-extensions)
+         (-any (lambda (entry)
+                 (let ((dir (nth 1 entry)))
+                   (when (file-equal-p directory dir)
+                     (setq root-directory dir
+                           id (car entry)))))
+               org-multi-wiki-directories)
+         (list :file file
+               :id id
+               :basename (file-relative-name sans-extension root-directory)))))
+
 ;;;###autoload
 (defun org-multi-wiki-entry-files (&optional id)
   "Get a list of Org files in the directory with ID."
@@ -151,6 +176,80 @@ file name."
   (-map (lambda (extension)
           (expand-file-name (concat basename extension) directory))
         org-multi-wiki-file-extensions))
+
+;;;; Custom link type
+;;;###autoload
+(defun org-multi-wiki-follow-link (link)
+  "Follow a wiki LINK."
+  (when (string-match (rx bol (group (+ (any alnum "-")))
+                          ":" (group (+? anything))
+                          (optional "::"
+                                    (or (and "#" (group-n 3 (+ anything)))
+                                        (and "*" (group-n 4 (+ anything)))))
+                          eol)
+                      link)
+    (let* ((id (intern (match-string 1 link)))
+           (basename (match-string 2 link))
+           (custom-id (match-string 3 link))
+           (headline (match-string 4 link))
+           (info (assoc id org-multi-wiki-directories #'eq))
+           (root (if info
+                     (nth 1 info)
+                   (user-error "Wiki directory for %s is undefined" id)))
+           (file (or (cl-find-if #'file-exists-p (org-multi-wiki-expand-org-file-names root basename))
+                     (cl-find-if #'file-exists-p (org-multi-wiki-expand-org-file-names
+                                                  root (funcall org-multi-wiki-escape-file-name-fn basename))))))
+      (cond
+       (file (find-file file))
+       (t (let ((marker (car-safe (org-ql-select (org-multi-wiki-entry-files id)
+                                    `(and (level 1)
+                                          (heading ,headline))
+                                    :action '(point-marker)))))
+            (if marker
+                (org-goto-marker-or-bmk marker)
+              (error "FIXME: Create a new file")))))
+      (let ((pos (or (and custom-id
+                          (or (car-safe (org-ql-select (current-buffer)
+                                          `(property "CUSTOM_ID" ,custom-id)
+                                          :action '(point)))
+                              (user-error "Cannot find an entry with CUSTOM_ID %s" custom-id)))
+                     (and headline
+                          (or (car-safe (org-ql-select (current-buffer)
+                                          `(heading ,headline)
+                                          :action '(point)))
+                              (user-error "Cannot find an entry with heading %s" headline))))))
+        (when pos (goto-char pos))))))
+
+;;;###autoload
+(defun org-multi-wiki-store-link ()
+  "Store a link."
+  (when (derived-mode-p 'org-mode)
+    (when-let (plist (org-multi-wiki-entry-file-p))
+      (when (org-before-first-heading-p)
+        (user-error "You cannot store the link of a wiki entry before the first heading"))
+      (-let* (((level _ _ _ headline _) (org-heading-components))
+              (custom-id (org-entry-get nil "CUSTOM_ID"))
+              (link (format "wiki:%s:%s%s"
+                            (symbol-name (plist-get plist :id))
+                            (plist-get plist :basename)
+                            (or (and (= level 1)
+                                     "")
+                                (and custom-id
+                                     (concat "::#" custom-id))
+                                (concat "::*" headline))))
+              (link-brackets (org-link-make-string link headline)))
+        (org-link-store-props :type "wiki"
+                              ;; :file (plist-get plist :file)
+                              ;; :node headline
+                              :link link :description headline)
+        link-brackets))))
+
+;; TODO: Define a link completion mechanism.
+;; (defun org-multi-wiki-complete-link ()
+;;   )
+
+;;;###autoload (org-link-set-parameters "wiki" :follow #'org-multi-wiki-follow-link :store #'org-multi-wiki-store-link)
+(org-link-set-parameters "wiki" :follow #'org-multi-wiki-follow-link :store #'org-multi-wiki-store-link)
 
 ;;;; Commands
 

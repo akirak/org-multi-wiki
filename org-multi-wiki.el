@@ -87,6 +87,12 @@ This should be the first element of one of the entries in
   :type 'boolean
   :group 'org-multi-wiki)
 
+(defcustom org-multi-wiki-filename-removed-words
+  '("a" "an" "the")
+  "List of words that should be removed from file names."
+  :type '(repeat string)
+  :group 'org-multi-wiki)
+
 ;;;; Other variables
 (defvar org-multi-wiki-current-directory-id org-multi-wiki-default-directory-id)
 
@@ -100,9 +106,17 @@ This should be the first element of one of the entries in
       (if (= 1 (length words))
           (filename-escape (car words))
         (->> words
+             (-filter #'org-multi-wiki--meaningful-word-p)
              (-map #'filename-escape)
              (-map #'s-upper-camel-case)
              (string-join))))))
+
+(defun org-multi-wiki--meaningful-word-p (word)
+  "Check if WORD is a meaningful word.
+
+This function returns nil if the word should be removed from a
+file name."
+  (not (cl-member word org-multi-wiki-filename-removed-words :test #'string-equal)))
 
 (defun org-multi-wiki-default-entry-template-fn (heading)
   "Generate an Org entry from HEADING."

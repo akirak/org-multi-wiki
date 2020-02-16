@@ -13,6 +13,7 @@ in
     emacsPackages = epkgs: (with epkgs.melpaPackages; [
       dash
       s
+      org-ql
     ]);
   };
 }

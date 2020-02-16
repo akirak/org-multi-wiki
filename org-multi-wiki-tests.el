@@ -29,6 +29,12 @@
         (let ((result (escape-fn "foo_id_1")))
           (expect result :to-equal "foo_id_1")))
 
+      (it "eliminates words like a, an, and the"
+        (let ((result (escape-fn "This is a pen")))
+          (expect result :to-equal "ThisIsPen"))
+        (let ((result (escape-fn "This is the knife")))
+          (expect result :to-equal "ThisIsKnife")))
+
       (it "eliminates most symbols not specified in the above"
         (let ((result (escape-fn "123@#!([]<\\|hello")))
           (expect result :to-equal "123hello")))))

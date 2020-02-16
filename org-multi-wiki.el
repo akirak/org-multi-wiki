@@ -67,6 +67,13 @@ This should be the first element of one of the entries in
   :type 'symbol
   :group 'org-multi-wiki)
 
+(defcustom org-multi-wiki-file-extensions '(".org" ".org.gpg")
+  "List of file extensions for wiki entries.
+
+The first one is used to create a new file by default."
+  :type '(repeat string)
+  :group 'org-multi-wiki)
+
 (defcustom org-multi-wiki-escape-file-name-fn #'org-multi-wiki-escape-file-name-camelcase-1
   "Function used to generated an escaped file name from a heading."
   :type 'function
@@ -139,6 +146,12 @@ file name."
   "Get a list of Org files in the directory with ID."
   (directory-files (org-multi-wiki-directory id) t org-agenda-file-regexp))
 
+(defun org-multi-wiki-expand-org-file-names (directory basename)
+  "Return a list of possible Org file names in DIRECTORY with BASENAME."
+  (-map (lambda (extension)
+          (expand-file-name (concat basename extension) directory))
+        org-multi-wiki-file-extensions))
+
 ;;;; Commands
 
 ;;;###autoload
@@ -154,11 +167,13 @@ file name."
 (cl-defun org-multi-wiki-visit-entry (heading &key id)
   "Visit an Org file for HEADING in the directory with ID."
   (let* ((dir (org-multi-wiki-directory id))
-         (filename (concat (funcall org-multi-wiki-escape-file-name-fn heading) ".org"))
-         (fpath (expand-file-name filename dir)))
+         (filenames (org-multi-wiki-expand-org-file-names
+                     dir (funcall org-multi-wiki-escape-file-name-fn heading)))
+         (fpath (cl-find-if #'file-exists-p filenames)))
     (unless (and dir (file-directory-p dir))
       (user-error "Wiki directory is nil or missing: %s" dir))
-    (unless (file-exists-p fpath)
+    (unless fpath
+      (setq fpath (head filenames))
       ;; Set default-directory to allow directory-specific templates
       (let ((default-directory dir))
         (with-temp-buffer

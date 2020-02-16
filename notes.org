@@ -1,22 +1,15 @@
-* [#A] Add a link type
+* TODO [#A] Linking to an entry in the same wiki
 :PROPERTIES:
-:CREATED_TIME: [2020-02-09 Sun 16:01]
+:CREATED_TIME: [2020-02-17 Mon 04:13]
 :END:
-
-The link format should comply to one of the following formats:
-
-#+begin_verse
-Linking with a custom ID:
-wiki:WIKIID:[subdir/]TITLE[::#customid]
-
-Linking with a heading:
-wiki:WIKIID:[subdir/]TITLE[::*heading]
-#+end_verse
-
-=TITLE= can be either the base name of an escaped file name (i.e. without =.org=) or its original top-level heading. File resolution can be done in the following process:
-
-1. It tries to find a file with with the title
-2. It escapes the title into a safe file name and tries to find a file with the base name.
-3. It tries to find a file with a top-level heading matching the title in the directory.
-
-=WIKIID= can be ~*~ which means the default wiki on the host.
+When it inserts a link to an entry in the same wiki, it should omit the directory ID.
+* TODO [#A] Linking to non-org files in wiki directories
+:PROPERTIES:
+:CREATED_TIME: [2020-02-17 Mon 04:13]
+:END:
+It should be able to store a link to a non-org file in a wiki directory.
+Inline images inserted via the link scheme should be displayed properly.
+* TODO Recursive file search
+:PROPERTIES:
+:CREATED_TIME: [2020-02-17 Mon 04:16]
+:END:

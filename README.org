@@ -9,25 +9,31 @@ It uses alphapapa's [[https://github.com/alphapapa/org-ql][helm-org-ql]] for sea
 :TOC: siblings
 :END:
 -  [[#features][Features]]
+-  [[#prerequisites][Prerequisites]]
 -  [[#installation][Installation]]
 -  [[#configuration][Configuration]]
 -  [[#usage][Usage]]
   -  [[#switching-the-current-wiki][Switching the current wiki]]
   -  [[#helm-org-multi-wiki][helm-org-multi-wiki]]
+-  [[#alternatives][Alternatives]]
 -  [[#license][License]]
 
 ** Features
 - Capable of running multiple wikis simultaneously inside a single Emacs session. You can search contents from multiple directories, and you can create a new entry in any of the directory.
 - Using =helm-org-ql= for searching entries.
-
-Org links are intact in this package now, but hopefully it will support a reliable referencing system in the future.
+- Add =wiki= link type to Org mode for safely resolving wiki directory locations based on directory IDs, not on absolute paths.
+** Prerequisites
+- Emacs 26.1 or later
+- Org 9.3 or later
+- =dash.el=
+- =s.el=
+- =org-ql=
+- [[https://github.com/alphapapa/org-ql][helm-org-ql]], if you use helm-org-multi-wiki (recommended)
 ** Installation
 This package is not available on MELPA yet.
 
-Clone this repository to your local machine, and install the following dependencies:
-
-- dash
-- [[https://github.com/alphapapa/org-ql][helm-org-ql]], if you use helm-org-multi-wiki (recommended)
+Install the dependencies and clone this repository to your local machine.
+You can use =straight.el= or Quelpa.
 ** Configuration
 Below is an example configuration through =use-package=:
 

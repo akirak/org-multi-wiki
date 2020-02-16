@@ -103,6 +103,11 @@ The first one is used to create a new file by default."
   :type '(repeat string)
   :group 'org-multi-wiki)
 
+(defcustom org-multi-wiki-want-custom-id nil
+  "When non-nil, prompt for a CUSTOM_ID property when storing a wiki link to a subheading."
+  :type 'boolean
+  :group 'org-multi-wiki)
+
 ;;;; Other variables
 (defvar org-multi-wiki-current-directory-id org-multi-wiki-default-directory-id)
 
@@ -228,7 +233,12 @@ If the file is a wiki entry, this functions returns a plist."
       (when (org-before-first-heading-p)
         (user-error "You cannot store the link of a wiki entry before the first heading"))
       (-let* (((level _ _ _ headline _) (org-heading-components))
-              (custom-id (org-entry-get nil "CUSTOM_ID"))
+              (custom-id (or (org-entry-get nil "CUSTOM_ID")
+                             (and org-multi-wiki-want-custom-id
+                                  (> level 1)
+                                  (progn
+                                    (org-set-property "CUSTOM_ID" nil)
+                                    (org-entry-get nil "CUSTOM_ID")))))
               (link (format "wiki:%s:%s%s"
                             (symbol-name (plist-get plist :id))
                             (plist-get plist :basename)

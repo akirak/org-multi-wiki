@@ -9,25 +9,33 @@ It uses alphapapa's [[https://github.com/alphapapa/org-ql][helm-org-ql]] for sea
 :TOC: siblings
 :END:
 -  [[#features][Features]]
+-  [[#prerequisites][Prerequisites]]
 -  [[#installation][Installation]]
 -  [[#configuration][Configuration]]
 -  [[#usage][Usage]]
   -  [[#switching-the-current-wiki][Switching the current wiki]]
   -  [[#helm-org-multi-wiki][helm-org-multi-wiki]]
+-  [[#details][Details]]
+  -  [[#wiki-link-type][wiki link type]]
+-  [[#alternatives][Alternatives]]
 -  [[#license][License]]
 
 ** Features
 - Capable of running multiple wikis simultaneously inside a single Emacs session. You can search contents from multiple directories, and you can create a new entry in any of the directory.
 - Using =helm-org-ql= for searching entries.
-
-Org links are intact in this package now, but hopefully it will support a reliable referencing system in the future.
+- Add =wiki= link type to Org mode for safely resolving wiki directory locations based on directory IDs, not on absolute paths.
+** Prerequisites
+- Emacs 26.1 or later
+- Org 9.3 or later
+- =dash.el=
+- =s.el=
+- =org-ql=
+- [[https://github.com/alphapapa/org-ql][helm-org-ql]], if you use helm-org-multi-wiki (recommended)
 ** Installation
 This package is not available on MELPA yet.
 
-Clone this repository to your local machine, and install the following dependencies:
-
-- dash
-- [[https://github.com/alphapapa/org-ql][helm-org-ql]], if you use helm-org-multi-wiki (recommended)
+Install the dependencies and clone this repository to your local machine.
+You can use =straight.el= or Quelpa.
 ** Configuration
 Below is an example configuration through =use-package=:
 
@@ -77,6 +85,30 @@ When multiple wikis are given, you can select a directory in which you want to c
 This is available as alternative actions (~tab~) in the dummy source of Helm.
 
 The package also provides =helm-org-multi-wiki-all=, which performs search on all wikis.
+** Details
+*** =wiki= link type
+:PROPERTIES:
+:CREATED_TIME: [2020-02-09 Sun 16:01]
+:END:
+This package adds =wiki= link type to =org-link-parameters=.
+
+The link format complies to one of the following formats:
+
+- Linking with a custom ID: =WIKIID:[subdir/]TITLE[::#customid]=
+- Linking with a heading: =WIKIID:[subdir/]TITLE[::*heading]=
+
+=WIKIID= is the ID of a directory.
+
+=TITLE= can be either the base name of an escaped file name (i.e. without =.org=) or its original top-level heading.
+=::= and its following part is omitted when linking to a top-level heading in a file.
+
+File resolution is done by attempting the following schemes, in that order:
+
+1. It tries to find a file with the base name of the exact =TITLE=.
+2. It escapes =TITLE= into a safe file name and tries to find a file with the base name.
+3. It tries to find a file with a top-level heading matching =TITLE= in the directory.
+
+=subdir= is not supported now, but it will be added when this package supports recursive file search.
 ** Alternatives
 There are several knowledge base systems for Emacs based on Org mode.
 

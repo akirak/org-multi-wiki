@@ -12,9 +12,6 @@ jobs:
     strategy:
       matrix:
         emacs-version:
-          - emacs-25-1
-          - emacs-25-2
-          - emacs-25-3
           - emacs-26-1
           - emacs-26-2
           - emacs-26-3

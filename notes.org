@@ -1,4 +1,15 @@
-* [#A] Add a link type
+* TODO [#A] Linking to an entry in the same wiki
 :PROPERTIES:
-:CREATED_TIME: [2020-02-09 Sun 16:01]
+:CREATED_TIME: [2020-02-17 Mon 04:13]
+:END:
+When it inserts a link to an entry in the same wiki, it should omit the directory ID.
+* TODO [#A] Linking to non-org files in wiki directories
+:PROPERTIES:
+:CREATED_TIME: [2020-02-17 Mon 04:13]
+:END:
+It should be able to store a link to a non-org file in a wiki directory.
+Inline images inserted via the link scheme should be displayed properly.
+* TODO Recursive file search
+:PROPERTIES:
+:CREATED_TIME: [2020-02-17 Mon 04:16]
 :END:

@@ -108,6 +108,13 @@ The first one is used to create a new file by default."
   :type 'boolean
   :group 'org-multi-wiki)
 
+(defcustom org-multi-wiki-custom-id-escape-fn #'org-multi-wiki-default-custom-id-escape-fn
+  "Function used to escape CUSTOM_ID properties.
+
+The function takes a heading as the argument."
+  :type 'function
+  :group 'org-multi-wiki)
+
 ;;;; Other variables
 (defvar org-multi-wiki-current-directory-id org-multi-wiki-default-directory-id)
 
@@ -236,9 +243,14 @@ If the file is a wiki entry, this functions returns a plist."
               (custom-id (or (org-entry-get nil "CUSTOM_ID")
                              (and org-multi-wiki-want-custom-id
                                   (> level 1)
-                                  (progn
-                                    (org-set-property "CUSTOM_ID" nil)
-                                    (org-entry-get nil "CUSTOM_ID")))))
+                                  (let* ((default (funcall org-multi-wiki-custom-id-escape-fn headline))
+                                         (custom-id (read-string
+                                                     (format "CUSTOM_ID for the heading [%s]: "
+                                                             default)
+                                                     nil nil default)))
+                                    (when custom-id
+                                      (org-set-property "CUSTOM_ID" custom-id)
+                                      custom-id)))))
               (link (format "wiki:%s:%s%s"
                             (symbol-name (plist-get plist :id))
                             (plist-get plist :basename)
@@ -253,6 +265,15 @@ If the file is a wiki entry, this functions returns a plist."
                               ;; :node headline
                               :link link :description headline)
         link-brackets))))
+
+(defun org-multi-wiki-default-custom-id-escape-fn (heading)
+  "Escape HEADING for a CUSTOM_ID property."
+  (--> (split-string heading (rx (any space)))
+       (-map (lambda (str)
+               (s-replace-regexp (rx (not (any alnum))) "" str))
+             it)
+       (-map #'downcase it)
+       (string-join it "-")))
 
 ;; TODO: Define a link completion mechanism.
 ;; (defun org-multi-wiki-complete-link ()

@@ -303,7 +303,7 @@ If the file is a wiki entry, this functions returns a plist."
     (unless (and dir (file-directory-p dir))
       (user-error "Wiki directory is nil or missing: %s" dir))
     (unless fpath
-      (setq fpath (head filenames))
+      (setq fpath (car filenames))
       ;; Set default-directory to allow directory-specific templates
       (let ((default-directory dir))
         (with-temp-buffer

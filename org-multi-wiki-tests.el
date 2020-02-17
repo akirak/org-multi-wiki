@@ -23,6 +23,12 @@
         (let ((result (escape-fn "hello world")))
           (expect result :to-equal "HelloWorld")))
 
+      (it "don't camel case words that entirely consists of upper case letters"
+        (let ((result (escape-fn "hello WORLD")))
+          (expect result :to-equal "HelloWORLD"))
+        (let ((result (escape-fn "hello WORLD1")))
+          (expect result :to-equal "HelloWORLD1")))
+
       (it "Don't treat hyphens and underscores as word separators"
         (let ((result (escape-fn "org-refile")))
           (expect result :to-equal "org-refile"))

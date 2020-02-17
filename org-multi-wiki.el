@@ -123,14 +123,21 @@ The function takes a heading as the argument."
   "Escape HEADING suitable for use in file name."
   (cl-labels ((filename-escape
                (str)
-               (s-replace-regexp (rx (not (any alnum "-._" nonascii))) "" str)))
+               (s-replace-regexp (rx (not (any alnum "-._" nonascii))) "" str))
+              (maybe-camelcase
+               (str)
+               (let ((case-fold-search nil))
+                 (if (and (not (string-empty-p str))
+                          (string-match-p (rx (any lower)) str))
+                     (s-upper-camel-case str)
+                   str))))
     (let ((words (split-string heading (rx (any space)))))
       (if (= 1 (length words))
           (filename-escape (car words))
         (->> words
              (-filter #'org-multi-wiki--meaningful-word-p)
              (-map #'filename-escape)
-             (-map #'s-upper-camel-case)
+             (-map #'maybe-camelcase)
              (string-join))))))
 
 (defun org-multi-wiki--meaningful-word-p (word)

@@ -57,9 +57,20 @@ Each entry in this variable should be a list containing the
 following items, in that order:
 
 - A symbol to uniquely identify the directory.
-- A file path to the directory containing Org files."
+- A file path to the directory containing Org files.
+- A plist to set directory-specific options.
+
+The plist can contain the following keys which correspond certain
+custom variables for the global setting:
+
+- `:top-level-link-fragments'"
   :type '(repeat (list (symbol :tag "ID")
-                       (directory :tag "Directory")))
+                       (directory :tag "Directory")
+                       (plist :inline t :tag "Options"
+                              :options
+                              (((const :doc "Generate a link fragment to each top-level heading."
+                                       :top-level-link-fragments)
+                                (boolean))))))
   :group 'org-multi-wiki)
 
 (defcustom org-multi-wiki-default-directory-id (caar org-multi-wiki-directories)
@@ -115,8 +126,29 @@ The function takes a heading as the argument."
   :type 'function
   :group 'org-multi-wiki)
 
+(defcustom org-multi-wiki-top-level-link-fragments nil
+  "Whether to add an ID/headline fragment to a link to each top level heading."
+  :type 'boolean
+  :group 'org-multi-wiki)
+
 ;;;; Other variables
 (defvar org-multi-wiki-current-directory-id org-multi-wiki-default-directory-id)
+
+;;;; Macros
+(defmacro org-multi-wiki--def-option (key)
+  "Define a function to retrieve KEY option."
+  (let ((func (intern (format "org-multi-wiki--%s" key)))
+        (plist-key (intern (concat ":" key)))
+        (default-var (intern (concat "org-multi-wiki-" key))))
+    `(defun ,func (id)
+       ,(format "Retrieve the value of %s for ID." key)
+       (if-let (entry (assoc id org-multi-wiki-directories))
+           (let ((plist (cddr entry)))
+             (or (plist-get plist ,plist-key)
+                 (symbol-value ,default-var)))
+         (user-error "No entry for %s in org-multi-wiki-directories" id)))))
+
+(org-multi-wiki--def-option "top-level-link-fragments")
 
 ;;;; Default functions
 (defun org-multi-wiki-escape-file-name-camelcase-1 (heading)
@@ -242,7 +274,8 @@ If the file is a wiki entry, this functions returns a plist."
       (-let* (((level _ _ _ headline _) (org-heading-components))
               (custom-id (or (org-entry-get nil "CUSTOM_ID")
                              (and org-multi-wiki-want-custom-id
-                                  (> level 1)
+                                  (or (org-multi-wiki--top-level-link-fragments (plist-get plist :id))
+                                      (> level 1))
                                   (let* ((default (funcall org-multi-wiki-custom-id-escape-fn headline))
                                          (custom-id (read-string
                                                      (format "CUSTOM_ID for the heading [%s]: "
@@ -254,7 +287,8 @@ If the file is a wiki entry, this functions returns a plist."
               (link (format "wiki:%s:%s%s"
                             (symbol-name (plist-get plist :id))
                             (plist-get plist :basename)
-                            (or (and (= level 1)
+                            (or (and (not (org-multi-wiki--top-level-link-fragments (plist-get plist :id)))
+                                     (= level 1)
                                      "")
                                 (and custom-id
                                      (concat "::#" custom-id))

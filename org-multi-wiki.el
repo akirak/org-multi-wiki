@@ -127,8 +127,7 @@ The function takes a heading as the argument."
   :group 'org-multi-wiki)
 
 (defcustom org-multi-wiki-top-level-link-fragments nil
-  "When non-nil, add a link fragment (custom ID or headline) to
-  even to each top level heading."
+  "Whether to add an ID/headline fragment to a link to each top level heading."
   :type 'boolean
   :group 'org-multi-wiki)
 
@@ -137,6 +136,7 @@ The function takes a heading as the argument."
 
 ;;;; Macros
 (defmacro org-multi-wiki--def-option (key)
+  "Define a function to retrieve KEY option."
   (let ((func (intern (format "org-multi-wiki--%s" key)))
         (plist-key (intern (concat ":" key)))
         (default-var (intern (concat "org-multi-wiki-" key))))
@@ -287,8 +287,8 @@ If the file is a wiki entry, this functions returns a plist."
               (link (format "wiki:%s:%s%s"
                             (symbol-name (plist-get plist :id))
                             (plist-get plist :basename)
-                            (or (and (or (org-multi-wiki--top-level-link-fragments (plist-get plist :id))
-                                         (= level 1))
+                            (or (and (not (org-multi-wiki--top-level-link-fragments (plist-get plist :id)))
+                                     (= level 1)
                                      "")
                                 (and custom-id
                                      (concat "::#" custom-id))

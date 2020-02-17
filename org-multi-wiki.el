@@ -115,6 +115,12 @@ The function takes a heading as the argument."
   :type 'function
   :group 'org-multi-wiki)
 
+(defcustom org-multi-wiki-top-level-link-fragments nil
+  "When non-nil, add a link fragment (custom ID or headline) to
+  even to each top level heading."
+  :type 'boolean
+  :group 'org-multi-wiki)
+
 ;;;; Other variables
 (defvar org-multi-wiki-current-directory-id org-multi-wiki-default-directory-id)
 
@@ -242,7 +248,8 @@ If the file is a wiki entry, this functions returns a plist."
       (-let* (((level _ _ _ headline _) (org-heading-components))
               (custom-id (or (org-entry-get nil "CUSTOM_ID")
                              (and org-multi-wiki-want-custom-id
-                                  (> level 1)
+                                  (or org-multi-wiki-top-level-link-fragments
+                                      (> level 1))
                                   (let* ((default (funcall org-multi-wiki-custom-id-escape-fn headline))
                                          (custom-id (read-string
                                                      (format "CUSTOM_ID for the heading [%s]: "
@@ -254,7 +261,8 @@ If the file is a wiki entry, this functions returns a plist."
               (link (format "wiki:%s:%s%s"
                             (symbol-name (plist-get plist :id))
                             (plist-get plist :basename)
-                            (or (and (= level 1)
+                            (or (and (or org-multi-wiki-top-level-link-fragments
+                                         (= level 1))
                                      "")
                                 (and custom-id
                                      (concat "::#" custom-id))

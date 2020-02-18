@@ -183,6 +183,15 @@ file name."
   "Generate an Org entry from HEADING."
   (concat "* " heading "\n"))
 
+(defun org-multi-wiki-default-custom-id-escape-fn (heading)
+  "Escape HEADING for a CUSTOM_ID property."
+  (--> (split-string heading (rx (any space)))
+       (-map (lambda (str)
+               (s-replace-regexp (rx (not (any alnum))) "" str))
+             it)
+       (-map #'downcase it)
+       (string-join it "-")))
+
 ;;;; File and directory infrastructure
 (defun org-multi-wiki-directory (&optional id)
   "Get the directory of a wiki ID."
@@ -306,15 +315,6 @@ If the file is a wiki entry, this functions returns a plist."
                               ;; :node headline
                               :link link :description headline)
         link-brackets))))
-
-(defun org-multi-wiki-default-custom-id-escape-fn (heading)
-  "Escape HEADING for a CUSTOM_ID property."
-  (--> (split-string heading (rx (any space)))
-       (-map (lambda (str)
-               (s-replace-regexp (rx (not (any alnum))) "" str))
-             it)
-       (-map #'downcase it)
-       (string-join it "-")))
 
 ;; TODO: Define a link completion mechanism.
 ;; (defun org-multi-wiki-complete-link ()

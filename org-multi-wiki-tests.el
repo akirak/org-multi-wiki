@@ -19,15 +19,15 @@
         (let ((result (escape-fn "あいうえお雙拼輸入方案")))
           (expect result :to-equal "あいうえお雙拼輸入方案")))
 
-      (it "join multiple words and convert to UpperCamelCase"
+      (it "join multiple words and upcase initials"
         (let ((result (escape-fn "hello world")))
-          (expect result :to-equal "HelloWorld")))
-
-      (it "don't camel case words that entirely consists of upper case letters"
+          (expect result :to-equal "HelloWorld"))
         (let ((result (escape-fn "hello WORLD")))
           (expect result :to-equal "HelloWORLD"))
         (let ((result (escape-fn "hello WORLD1")))
-          (expect result :to-equal "HelloWORLD1")))
+          (expect result :to-equal "HelloWORLD1"))
+        (let ((result (escape-fn "hello wOrld")))
+          (expect result :to-equal "HelloWOrld")))
 
       (it "Don't treat hyphens and underscores as word separators"
         (let ((result (escape-fn "org-refile")))

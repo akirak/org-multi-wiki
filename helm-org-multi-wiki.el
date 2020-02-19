@@ -51,6 +51,24 @@ PROMPT and ACTION are passed to helm."
                                     org-multi-wiki-directories)
                 :action (or action (lambda (candidate) (or (helm-marked-candidates) candidate)))))))
 
+(cl-defun helm-org-multi-wiki-make-dummy-source (ids &key first)
+  "Create a dummy helm source.
+
+IDS and FIRST are the same as in `helm-org-multi-wiki'."
+  (helm-build-dummy-source "New entry"
+    :action
+    (mapcar (lambda (id)
+              (cons (format "Create a new entry in %s%s"
+                            id
+                            (if (equal id first)
+                                " (current)"
+                              ""))
+                    (lambda (inp)
+                      (org-multi-wiki-visit-entry inp :id id))))
+            (if (and first (> (length ids) 1))
+                (cons first (-remove-item first ids))
+              ids))))
+
 ;;;###autoload
 (cl-defun helm-org-multi-wiki (&optional ids &key first)
   "Visit an entry or create a new entry.
@@ -83,19 +101,7 @@ When FIRST is given, it is the default target of entry creation."
                (list (helm-org-ql-source files
                                          :name (format "Wiki (%s)"
                                                        (mapconcat #'symbol-name ids ",")))
-                     (helm-build-dummy-source "New entry"
-                       :action
-                       (mapcar (lambda (id)
-                                 (cons (format "Create a new entry in %s%s"
-                                               id
-                                               (if (equal id first)
-                                                   " (current)"
-                                                 ""))
-                                       (lambda (inp)
-                                         (org-multi-wiki-visit-entry inp :id id))))
-                               (if (and first (> (length ids) 1))
-                                   (cons first (-remove-item first ids))
-                                 ids)))))))))
+                     (helm-org-multi-wiki-make-dummy-source ids :first first)))))))
 
 ;;;###autoload
 (defun helm-org-multi-wiki-all ()

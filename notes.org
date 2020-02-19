@@ -17,3 +17,10 @@ Inline images inserted via the link scheme should be displayed properly.
 :PROPERTIES:
 :CREATED_TIME: [2020-02-17 Mon 04:16]
 :END:
+* TODO Prohibit refiling from wiki
+:PROPERTIES:
+:CREATED_TIME: [2020-02-20 Thu 03:19]
+:END:
+It may be important to prohibit refiling entries that are already in a wiki.
+Refiling wiki entries to other places can cause deadlinks, which makes the wiki much useless.
+It is possible to implement this as a function advice, but a better solution would be to define a minor mode =org-multi-wiki-mode= which can be enabled inside =org-mode=.

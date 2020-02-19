@@ -36,6 +36,12 @@
 (require 'org-ql)
 (require 'helm-org-ql)
 
+(defvar helm-org-multi-wiki-dummy-source-map
+  (let ((map (copy-keymap helm-map)))
+    map)
+  "Keymap for the dummy source.
+Based on `helm-map'.")
+
 (cl-defun helm-org-multi-wiki-select-ids (&key prompt action)
   "Select directory IDs using helm.
 
@@ -56,6 +62,7 @@ PROMPT and ACTION are passed to helm."
 
 IDS and FIRST are the same as in `helm-org-multi-wiki'."
   (helm-build-dummy-source "New entry"
+    :keymap helm-org-multi-wiki-dummy-source-map
     :action
     (mapcar (lambda (id)
               (cons (format "Create a new entry in %s%s"

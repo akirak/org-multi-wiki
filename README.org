@@ -71,7 +71,10 @@ By default, it lets you select a heading or create a new entry in the current wi
 
 With a universal prefix argument (~C-u~), you can select wikis.
 You can select multiple wikis with ~C-SPC~.
-
+**** Running on particular wikis
+:PROPERTIES:
+:CREATED_TIME: [2020-02-22 Sat 14:34]
+:END:
 You can also use it as a function which accepts an ID or a list of IDs.
 You can define your own command to search queries in a specific wiki.
 
@@ -85,6 +88,21 @@ When multiple wikis are given, you can select a directory in which you want to c
 This is available as alternative actions (~tab~) in the dummy source of Helm.
 
 The package also provides =helm-org-multi-wiki-all=, which performs search on all wikis.
+**** Quickly creating an entry in a particular wiki
+:PROPERTIES:
+:CREATED_TIME: [2020-02-22 Sat 14:35]
+:END:
+The dummy source has a dedicated keymap =helm-make-helm-org-multi-wiki-dummy-source-map= which lets you bind keys to create an entry in a particular wiki:
+
+#+begin_src emacs-lisp
+  (general-def :keymap 'helm-org-multi-wiki-dummy-source-map :package 'helm-org-multi-wiki
+    :prefix "C-c C-c"
+    "p" (helm-org-multi-wiki-def-create-entry-action programming))
+#+end_src
+
+With this configuration, you can create an entry in =programming= wiki from the minibuffer input by pressing ~C-c C-c p~.
+
+=helm-org-multi-wiki-def-create-entry-action= macro defines an interactive function which exits the running helm session and visits an entry.
 ** Details
 *** =wiki= link type
 :PROPERTIES:

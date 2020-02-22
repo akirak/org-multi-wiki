@@ -7,6 +7,8 @@ When it inserts a link to an entry in the same wiki, it should omit the director
 Perhaps it can be implemented by advising =org-link-make-string= to modify the link.
 This is a hack, but this seems to be the only way according to the current implementation of =org-insert-link=.
 I will a custom variable to enable this feature.
+
+The entry format should be like ~wiki::TITLE~.
 * TODO [#A] Linking to non-org files in wiki directories
 :PROPERTIES:
 :CREATED_TIME: [2020-02-17 Mon 04:13]

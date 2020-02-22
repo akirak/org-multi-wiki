@@ -42,6 +42,20 @@
   "Keymap for the dummy source.
 Based on `helm-map'.")
 
+(defun helm-org-multi-wiki-create-entry-from-input (id)
+  "Create an entry in ID from the input in the dummy source."
+  (let ((inp (helm-get-selection)))
+    (if (not (string-empty-p inp))
+        (helm-run-after-exit #'org-multi-wiki-visit-entry inp :id id)
+      (user-error "Input is empty"))))
+
+;;;###autoload
+(defmacro helm-org-multi-wiki-def-create-entry-action (id)
+  "Define a command to creating an entry in ID via the dummy source."
+  `(defun ,(intern (format "helm-org-multi-wiki-create/%s" id)) ()
+     (interactive)
+     (helm-org-multi-wiki-create-entry-from-input (quote ,id))))
+
 (cl-defun helm-org-multi-wiki-select-ids (&key prompt action)
   "Select directory IDs using helm.
 

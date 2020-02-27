@@ -131,6 +131,18 @@ The function takes a heading as the argument."
   :type 'boolean
   :group 'org-multi-wiki)
 
+(defcustom org-multi-wiki-rename-buffer t
+  "Whether to rename Org buffers to represent the directory.
+
+When this variable is non-nil, Org buffers opened this package
+are renamed so that they contain their directory IDs.
+
+This is a hack for `helm-org-ql'.
+
+This setting does not affect buffers that are already open"
+  :type 'boolean
+  :group 'org-multi-wiki)
+
 ;;;; Other variables
 (defvar org-multi-wiki-current-directory-id org-multi-wiki-default-directory-id)
 
@@ -220,9 +232,28 @@ If the file is a wiki entry, this functions returns a plist."
                :basename (file-relative-name sans-extension root-directory)))))
 
 ;;;###autoload
-(defun org-multi-wiki-entry-files (&optional id)
-  "Get a list of Org files in the directory with ID."
-  (directory-files (org-multi-wiki-directory id) t org-agenda-file-regexp))
+(cl-defun org-multi-wiki-entry-files (&optional id &key as-buffers)
+  "Get a list of Org files in the directory.
+
+When ID is given, it is an identifier.
+
+If AS-BUFFERS is non-nil, this function returns a list of buffers
+instead of file names."
+  (let* ((dir (org-multi-wiki-directory id))
+         (files (directory-files dir t org-agenda-file-regexp)))
+    (if as-buffers
+        (mapcar (lambda (file)
+                  (or (find-buffer-visiting file)
+                      (let ((buf (find-file-noselect file)))
+                        (when org-multi-wiki-rename-buffer
+                          (with-current-buffer buf
+                            (rename-buffer (format "%s:%s"
+                                                   id
+                                                   (file-relative-name file dir))
+                                           t)))
+                        buf)))
+                files)
+      files)))
 
 (defun org-multi-wiki-expand-org-file-names (directory basename)
   "Return a list of possible Org file names in DIRECTORY with BASENAME."

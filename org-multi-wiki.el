@@ -70,6 +70,9 @@ custom variables for the global setting:
                               :options
                               (((const :doc "Generate a link fragment to each top-level heading."
                                        :top-level-link-fragments)
+                                (boolean))
+                               ((const :doc "Recursively search files in subdirectories"
+                                       :recursive)
                                 (boolean))))))
   :group 'org-multi-wiki)
 
@@ -143,6 +146,11 @@ This setting does not affect buffers that are already open"
   :type 'boolean
   :group 'org-multi-wiki)
 
+(defcustom org-multi-wiki-rg-args '("--color=never" "--files")
+  "Command line arguments passed to rg."
+  :type '(repeat string)
+  :group 'org-multi-wiki)
+
 ;;;; Other variables
 (defvar org-multi-wiki-current-directory-id org-multi-wiki-default-directory-id)
 
@@ -168,14 +176,20 @@ This setting does not affect buffers that are already open"
   (cl-labels ((filename-escape
                (str)
                (s-replace-regexp (rx (not (any alnum "-._" nonascii))) "" str)))
-    (let ((words (split-string heading (rx (any space)))))
-      (if (= 1 (length words))
-          (filename-escape (car words))
-        (->> words
-             (-filter #'org-multi-wiki--meaningful-word-p)
-             (-map #'filename-escape)
-             (-map #'upcase-initials)
-             (string-join))))))
+    (-let* (((_ dir name) (s-match (rx bol
+                                       (group (* (*? anything) "/"))
+                                       (group (+ anything))
+                                       eol)
+                                   heading))
+            (words (split-string name (rx (any space)))))
+      (concat dir
+              (if (= 1 (length words))
+                  (filename-escape (car words))
+                (->> words
+                     (-filter #'org-multi-wiki--meaningful-word-p)
+                     (-map #'filename-escape)
+                     (-map #'upcase-initials)
+                     (string-join)))))))
 
 (defun org-multi-wiki--meaningful-word-p (word)
   "Check if WORD is a meaningful word.
@@ -231,6 +245,12 @@ If the file is a wiki entry, this functions returns a plist."
                :id id
                :basename (file-relative-name sans-extension root-directory)))))
 
+(defun org-multi-wiki--plist-get (prop &optional id)
+  "Select PROP from the properties of ID."
+  (let* ((id (or id org-multi-wiki-current-directory-id))
+         (plist (cdr-safe (alist-get id org-multi-wiki-directories))))
+    (plist-get plist prop)))
+
 ;;;###autoload
 (cl-defun org-multi-wiki-entry-files (&optional id &key as-buffers)
   "Get a list of Org files in the directory.
@@ -240,7 +260,10 @@ When ID is given, it is an identifier.
 If AS-BUFFERS is non-nil, this function returns a list of buffers
 instead of file names."
   (let* ((dir (org-multi-wiki-directory id))
-         (files (directory-files dir t org-agenda-file-regexp)))
+         (recursive (org-multi-wiki--plist-get :recursive id))
+         (files (if recursive
+                    (org-multi-wiki--org-files-recursively dir)
+                  (directory-files dir t org-agenda-file-regexp))))
     (if as-buffers
         (mapcar (lambda (file)
                   (or (find-buffer-visiting file)
@@ -254,6 +277,15 @@ instead of file names."
                         buf)))
                 files)
       files)))
+
+(defun org-multi-wiki--org-files-recursively (dir)
+  "Get a list of Org files in DIR recursively."
+  (let ((default-directory dir))
+    (mapcar (lambda (fpath) (expand-file-name fpath dir))
+            (apply #'process-lines
+                   "rg"
+                   "-g" (format "*{%s}" (string-join org-multi-wiki-file-extensions ","))
+                   org-multi-wiki-rg-args))))
 
 (defun org-multi-wiki-expand-org-file-names (directory basename)
   "Return a list of possible Org file names in DIRECTORY with BASENAME."

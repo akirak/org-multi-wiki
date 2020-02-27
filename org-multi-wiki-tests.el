@@ -43,7 +43,11 @@
 
       (it "eliminates most symbols not specified in the above"
         (let ((result (escape-fn "123@#!([]<\\|hello")))
-          (expect result :to-equal "123hello")))))
+          (expect result :to-equal "123hello")))
+
+      (it "Don't eliminate slash"
+        (let ((result (escape-fn "hello/john connor")))
+          (expect result :to-equal "hello/JohnConnor")))))
 
   (describe "org-multi-wiki-default-entry-template-fn"
     (cl-flet ((template (heading) (org-multi-wiki-default-entry-template-fn heading)))

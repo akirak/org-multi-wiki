@@ -146,6 +146,11 @@ This setting does not affect buffers that are already open"
   :type 'boolean
   :group 'org-multi-wiki)
 
+(defcustom org-multi-wiki-rg-executable "rg"
+  "Executable name of ripgrep."
+  :type 'filename
+  :group 'org-multi-wiki)
+
 (defcustom org-multi-wiki-rg-args '("--color=never" "--files")
   "Command line arguments passed to rg."
   :type '(repeat string)
@@ -303,7 +308,7 @@ instead of file names."
   (let ((default-directory dir))
     (mapcar (lambda (fpath) (expand-file-name fpath dir))
             (apply #'process-lines
-                   "rg"
+                   org-multi-wiki-rg-executable
                    "-g" (format "*{%s}" (string-join org-multi-wiki-file-extensions ","))
                    org-multi-wiki-rg-args))))
 

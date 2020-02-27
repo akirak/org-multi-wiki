@@ -15,7 +15,8 @@ The entry format should be like ~wiki::TITLE~.
 :END:
 It should be able to store a link to a non-org file in a wiki directory.
 Inline images inserted via the link scheme should be displayed properly.
-* TODO Recursive file search
+* DONE Recursive file search
+CLOSED: [2020-02-28 Fri 02:03]
 :PROPERTIES:
 :CREATED_TIME: [2020-02-17 Mon 04:16]
 :END:

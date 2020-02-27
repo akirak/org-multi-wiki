@@ -115,7 +115,7 @@ When FIRST is given, it is the default target of entry creation."
               (boolean 'and)
               (helm-input-idle-delay helm-org-ql-input-idle-delay)
               (files (->> ids
-                          (mapcar #'org-multi-wiki-entry-files)
+                          (--map (org-multi-wiki-entry-files it :as-buffers t))
                           (apply #'append))))
          (helm :prompt (format "Query (boolean %s): " (-> boolean symbol-name upcase))
                :sources

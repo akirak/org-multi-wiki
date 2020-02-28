@@ -101,8 +101,8 @@ The first one is used to create a new file by default."
   :type 'function
   :group 'org-multi-wiki)
 
-(defcustom org-multi-wiki-find-file-fn #'find-file-other-window
-  "Function used to visit an Org file."
+(defcustom org-multi-wiki-display-buffer-fn #'pop-to-buffer
+  "Function used to display Org buffers."
   :type 'function
   :group 'org-multi-wiki)
 
@@ -146,9 +146,22 @@ This setting does not affect buffers that are already open"
   :type 'boolean
   :group 'org-multi-wiki)
 
+(defcustom org-multi-wiki-rg-executable "rg"
+  "Executable name of ripgrep."
+  :type 'filename
+  :group 'org-multi-wiki)
+
 (defcustom org-multi-wiki-rg-args '("--color=never" "--files")
   "Command line arguments passed to rg."
   :type '(repeat string)
+  :group 'org-multi-wiki)
+
+(defcustom org-multi-wiki-buffer-name-fn #'org-multi-wiki-buffer-name-1
+  "Function to determine the names of Org buffers.
+
+The function takes a plist as arguments.
+See `org-multi-wiki-buffer-name-1' for an example."
+  :type 'function
   :group 'org-multi-wiki)
 
 ;;;; Other variables
@@ -267,23 +280,35 @@ instead of file names."
     (if as-buffers
         (mapcar (lambda (file)
                   (or (find-buffer-visiting file)
-                      (let ((buf (find-file-noselect file)))
-                        (when org-multi-wiki-rename-buffer
-                          (with-current-buffer buf
-                            (rename-buffer (format "%s:%s"
-                                                   id
-                                                   (file-relative-name file dir))
-                                           t)))
+                      (let* ((default-directory (file-name-directory file))
+                             (buf (create-file-buffer file)))
+                        ;; Based on the implementation by @kungsgeten
+                        ;; for faster loading of many Org files.
+                        ;; https://github.com/alphapapa/org-ql/issues/88#issuecomment-570568341
+                        (with-current-buffer buf
+                          (insert-file-contents file)
+                          (setq buffer-file-name file)
+                          (when org-multi-wiki-rename-buffer
+                            (rename-buffer (funcall org-multi-wiki-buffer-name-fn
+                                                    :id id :file file :dir dir)
+                                           t))
+                          (set-buffer-modified-p nil)
+                          ;; Use delay-mode-hooks for faster loading.
+                          (delay-mode-hooks (set-auto-mode)))
                         buf)))
                 files)
       files)))
+
+(cl-defun org-multi-wiki-buffer-name-1 (&key id file dir)
+  "Return a buffer name suitable for Wiki."
+  (format "%s:%s" id (file-relative-name file dir)))
 
 (defun org-multi-wiki--org-files-recursively (dir)
   "Get a list of Org files in DIR recursively."
   (let ((default-directory dir))
     (mapcar (lambda (fpath) (expand-file-name fpath dir))
             (apply #'process-lines
-                   "rg"
+                   org-multi-wiki-rg-executable
                    "-g" (format "*{%s}" (string-join org-multi-wiki-file-extensions ","))
                    org-multi-wiki-rg-args))))
 
@@ -399,14 +424,26 @@ instead of file names."
          (fpath (cl-find-if #'file-exists-p filenames)))
     (unless (and dir (file-directory-p dir))
       (user-error "Wiki directory is nil or missing: %s" dir))
-    (unless fpath
-      (setq fpath (car filenames))
-      ;; Set default-directory to allow directory-specific templates
-      (let ((default-directory dir))
-        (with-temp-buffer
-          (insert (funcall org-multi-wiki-entry-template-fn heading))
-          (write-file fpath))))
-    (funcall org-multi-wiki-find-file-fn fpath)))
+    (let* ((new (null fpath))
+           (fpath (or fpath (car filenames)))
+           (existing-buffer (find-buffer-visiting fpath))
+           ;; Set default-directory to allow directory-specific templates
+           (default-directory dir)
+           (buf (or existing-buffer
+                    (and new
+                         (with-current-buffer (create-file-buffer fpath)
+                           (setq buffer-file-name fpath)
+                           (insert (funcall org-multi-wiki-entry-template-fn heading))
+                           (set-auto-mode)
+                           (current-buffer)))
+                    (find-file-noselect fpath))))
+      (when (and (not existing-buffer)
+                 org-multi-wiki-rename-buffer)
+        (with-current-buffer buf
+          (rename-buffer (funcall org-multi-wiki-buffer-name-fn
+                                  :id id :file fpath :dir dir)
+                         t)))
+      (funcall org-multi-wiki-display-buffer-fn buf))))
 
 (provide 'org-multi-wiki)
 ;;; org-multi-wiki.el ends here

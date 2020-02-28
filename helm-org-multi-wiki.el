@@ -118,6 +118,7 @@ When FIRST is given, it is the default target of entry creation."
                           (--map (org-multi-wiki-entry-files it :as-buffers t))
                           (apply #'append))))
          (helm :prompt (format "Query (boolean %s): " (-> boolean symbol-name upcase))
+               :buffer "*helm org multi wiki*"
                :sources
                (list (helm-org-ql-source files
                                          :name (format "Wiki (%s)"

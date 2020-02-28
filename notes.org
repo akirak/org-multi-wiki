@@ -1,3 +1,8 @@
+* TODO [#A] Enable org-multi-wiki-mode minor mode in wiki buffers
+:PROPERTIES:
+:CREATED_TIME: [2020-02-28 Fri 09:08]
+:END:
+This is necessary for implementing some other features.
 * TODO [#A] Linking to an entry in the same wiki
 :PROPERTIES:
 :CREATED_TIME: [2020-02-17 Mon 04:13]

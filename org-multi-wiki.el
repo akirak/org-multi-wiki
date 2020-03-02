@@ -345,6 +345,21 @@ instead of file names."
           (expand-file-name (concat basename extension) directory))
         org-multi-wiki-file-extensions))
 
+(cl-defun org-multi-wiki-link-file-name (file &key id dir)
+  "Return a file name in an Org link.
+
+FILE is an absolute file name to an Org file.
+
+Either ID or DIR to the wiki should be specified."
+  (let ((dir (or dir (org-multi-wiki-directory id)))
+        (extension (-find (lambda (extension)
+                            (string-suffix-p extension file))
+                          org-multi-wiki-file-extensions)))
+    (unless extension
+      (error "No matching extension in `org-multi-wiki-file-extensions'"))
+    (->> (file-relative-name file dir)
+         (string-remove-suffix extension))))
+
 ;;;; Custom link type
 ;;;###autoload
 (defun org-multi-wiki-follow-link (link)
@@ -391,6 +406,18 @@ instead of file names."
 ;;;###autoload
 (defun org-multi-wiki-store-link ()
   "Store a link."
+  (let* ((plist (org-multi-wiki--get-link-data))
+         (link-brackets (org-link-make-string (plist-get plist :link)
+                                              (plist-get plist :headline))))
+    (org-link-store-props :type "wiki"
+                          ;; :file (plist-get plist :file)
+                          ;; :node headline
+                          :link (plist-get plist :link)
+                          :description (plist-get plist :headline))
+    link-brackets))
+
+(defun org-multi-wiki--get-link-data ()
+  "Return data needed for generating a link."
   (when (derived-mode-p 'org-mode)
     (when-let (plist (org-multi-wiki-entry-file-p))
       (when (org-before-first-heading-p)
@@ -416,20 +443,37 @@ instead of file names."
                                      "")
                                 (and custom-id
                                      (concat "::#" custom-id))
-                                (concat "::*" headline))))
-              (link-brackets (org-link-make-string link headline)))
-        (org-link-store-props :type "wiki"
-                              ;; :file (plist-get plist :file)
-                              ;; :node headline
-                              :link link :description headline)
-        link-brackets))))
+                                (concat "::*" headline)))))
+        (list :link link :headline headline)))))
 
-;; TODO: Define a link completion mechanism.
-;; (defun org-multi-wiki-complete-link ()
-;;   )
+(defun org-multi-wiki-complete-link ()
+  "Support for the Org link completion mechanism."
+  (let* ((id (intern (completing-read "Wiki: "
+                                      (mapcar (-compose #'symbol-name #'car) org-multi-wiki-directories))))
+         (files (org-multi-wiki-entry-files id))
+         (alist (mapcar (lambda (file) (cons (org-multi-wiki-link-file-name file :id id) file))
+                        files))
+         (file (cdr (assoc (completing-read "File: " (mapcar #'car alist)) alist)))
+         headings
+         (plist (with-current-buffer
+                    (or (find-buffer-visiting file)
+                        (find-file-noselect file))
+                  (org-with-wide-buffer
+                   (goto-char (point-min))
+                   (while (re-search-forward (rx bol (+ "*") space) nil t)
+                     (push (propertize (string-trim-right (thing-at-point 'line t))
+                                       'marker (point-marker))
+                           headings))
+                   (let* ((heading (completing-read "Heading: " (nreverse headings) nil t))
+                          (marker (get-char-property 0 'marker heading)))
+                     (goto-char marker)
+                     (org-multi-wiki--get-link-data))))))
+    (plist-get plist :link)))
 
 ;;;###autoload (org-link-set-parameters "wiki" :follow #'org-multi-wiki-follow-link :store #'org-multi-wiki-store-link)
-(org-link-set-parameters "wiki" :follow #'org-multi-wiki-follow-link :store #'org-multi-wiki-store-link)
+(org-link-set-parameters "wiki" :follow #'org-multi-wiki-follow-link
+                         :store #'org-multi-wiki-store-link
+                         :complete #'org-multi-wiki-complete-link)
 
 ;;;; Commands
 

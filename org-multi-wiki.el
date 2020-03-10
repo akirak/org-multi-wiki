@@ -167,6 +167,9 @@ See `org-multi-wiki-buffer-name-1' for an example."
 ;;;; Other variables
 (defvar org-multi-wiki-current-directory-id org-multi-wiki-default-directory-id)
 
+(defvar-local org-multi-wiki-mode-hooks-delayed nil
+  "Whether `run-mode-hooks' has been delayed in the buffer.")
+
 ;;;; Macros
 (defmacro org-multi-wiki--def-option (key)
   "Define a function to retrieve KEY option."
@@ -294,10 +297,21 @@ instead of file names."
                                            t))
                           (set-buffer-modified-p nil)
                           ;; Use delay-mode-hooks for faster loading.
-                          (delay-mode-hooks (set-auto-mode)))
+                          (delay-mode-hooks (set-auto-mode))
+                          (setq org-multi-wiki-mode-hooks-delayed t))
                         buf)))
                 files)
       files)))
+
+(defun org-multi-wiki-run-mode-hooks ()
+  "Run mode hooks delayed by org-multi-wiki."
+  (when org-multi-wiki-mode-hooks-delayed
+    (run-mode-hooks)
+    (setq org-multi-wiki-mode-hooks-delayed nil)))
+
+;; Run mode hooks when `org-show-entry' is called.
+;; This is effective when an entry is visited by `helm-org-ql'.
+(advice-add 'org-show-entry :before #'org-multi-wiki-run-mode-hooks)
 
 (cl-defun org-multi-wiki-buffer-name-1 (&key id file dir)
   "Return a buffer name suitable for Wiki."
@@ -443,6 +457,8 @@ instead of file names."
           (rename-buffer (funcall org-multi-wiki-buffer-name-fn
                                   :id id :file fpath :dir dir)
                          t)))
+      (with-current-buffer buf
+        (org-multi-wiki-run-mode-hooks))
       (funcall org-multi-wiki-display-buffer-fn buf))))
 
 (provide 'org-multi-wiki)

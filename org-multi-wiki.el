@@ -134,6 +134,11 @@ The function takes a heading as the argument."
   :type 'boolean
   :group 'org-multi-wiki)
 
+(defcustom org-multi-wiki-allow-omit-namespace t
+  "Whether to omit the namespace ID in a link to the same namespace."
+  :type 'boolean
+  :group 'org-multi-wiki)
+
 (defcustom org-multi-wiki-rename-buffer t
   "Whether to rename Org buffers to represent the directory.
 
@@ -274,6 +279,10 @@ If the file is a wiki entry, this functions returns a plist."
                :id id
                :basename (file-relative-name sans-extension root-directory)))))
 
+(defun org-multi-wiki--current-namespace ()
+  "Return the namespace ID of the current entry."
+  (plist-get (org-multi-wiki-entry-file-p) :id))
+
 (defun org-multi-wiki--plist-get (prop &optional id)
   "Select PROP from the properties of ID."
   (let* ((id (or id org-multi-wiki-current-directory-id))
@@ -364,14 +373,17 @@ Either ID or DIR to the wiki should be specified."
 ;;;###autoload
 (defun org-multi-wiki-follow-link (link)
   "Follow a wiki LINK."
-  (when (string-match (rx bol (group (+ (any alnum "-")))
-                          ":" (group (+? anything))
+  (when (string-match (rx bol (group-n 1 (* (any alnum "-")))
+                          ":" (group-n 2 (+? anything))
                           (optional "::"
                                     (or (and "#" (group-n 3 (+ anything)))
                                         (and "*" (group-n 4 (+ anything)))))
                           eol)
                       link)
-    (let* ((id (intern (match-string 1 link)))
+    (let* ((id (if (string-empty-p (match-string 1 link))
+                   (save-match-data
+                     (org-multi-wiki--current-namespace))
+                 (intern (match-string 1 link))))
            (basename (match-string 2 link))
            (custom-id (match-string 3 link))
            (headline (match-string 4 link))
@@ -416,8 +428,10 @@ Either ID or DIR to the wiki should be specified."
                           :description (plist-get plist :headline))
     link-brackets))
 
-(defun org-multi-wiki--get-link-data ()
-  "Return data needed for generating a link."
+(defun org-multi-wiki--get-link-data (&optional base-id)
+  "Return data needed for generating a link.
+
+BASE-ID, if specified, is the namespace of the link orientation."
   (when (derived-mode-p 'org-mode)
     (when-let (plist (org-multi-wiki-entry-file-p))
       (when (org-before-first-heading-p)
@@ -435,8 +449,13 @@ Either ID or DIR to the wiki should be specified."
                                     (when custom-id
                                       (org-set-property "CUSTOM_ID" custom-id)
                                       custom-id)))))
+              (ns (plist-get plist :id))
               (link (format "wiki:%s:%s%s"
-                            (symbol-name (plist-get plist :id))
+                            (if (not (and base-id
+                                          org-multi-wiki-allow-omit-namespace
+                                          (eq base-id ns)))
+                                (symbol-name ns)
+                              "")
                             (plist-get plist :basename)
                             (or (and (not (org-multi-wiki--top-level-link-fragments (plist-get plist :id)))
                                      (= level 1)
@@ -446,10 +465,30 @@ Either ID or DIR to the wiki should be specified."
                                 (concat "::*" headline)))))
         (list :link link :headline headline)))))
 
+(defun org-multi-wiki-strip-namespace (link)
+  "Strip namespace from LINK if possible."
+  (if (and (string-prefix-p "wiki:" link)
+           org-multi-wiki-allow-omit-namespace
+           (string-match (rx bol "wiki:"
+                             (group (*? (not (any ":")))) ":"
+                             (group (+ anything)) eol)
+                         link)
+           (eq (intern (match-string 1 link))
+               (save-match-data
+                 (plist-get (org-multi-wiki-entry-file-p) :id))))
+      (concat "wiki::" (match-string 2 link))
+    link))
+
+(advice-add 'org-link-escape :filter-return #'org-multi-wiki-strip-namespace)
+
 (defun org-multi-wiki-complete-link ()
   "Support for the Org link completion mechanism."
-  (let* ((id (intern (completing-read "Wiki: "
-                                      (mapcar (-compose #'symbol-name #'car) org-multi-wiki-directories))))
+  (let* ((this-id (plist-get (org-multi-wiki-entry-file-p) :id))
+         (id (intern (completing-read "Wiki: "
+                                      (->> org-multi-wiki-directories
+                                           (-map #'car)
+                                           (-map #'symbol-name))
+                                      nil t nil nil this-id)))
          (files (org-multi-wiki-entry-files id))
          (alist (mapcar (lambda (file) (cons (org-multi-wiki-link-file-name file :id id) file))
                         files))
@@ -467,7 +506,7 @@ Either ID or DIR to the wiki should be specified."
                    (let* ((heading (completing-read "Heading: " (nreverse headings) nil t))
                           (marker (get-char-property 0 'marker heading)))
                      (goto-char marker)
-                     (org-multi-wiki--get-link-data))))))
+                     (org-multi-wiki--get-link-data this-id))))))
     (plist-get plist :link)))
 
 ;;;###autoload (org-link-set-parameters "wiki" :follow #'org-multi-wiki-follow-link :store #'org-multi-wiki-store-link)

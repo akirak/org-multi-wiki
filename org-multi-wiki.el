@@ -241,7 +241,8 @@ file name."
 
 (defun org-multi-wiki-check-buffer ()
   "Check if the current buffer is an wiki entry."
-  (when (org-multi-wiki-entry-file-p)
+  (when (ignore-errors
+          (org-multi-wiki-entry-file-p))
     (org-multi-wiki-mode 1)))
 
 (defun org-multi-wiki-directory (&optional id)

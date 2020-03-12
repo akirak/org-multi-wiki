@@ -263,8 +263,10 @@ If the file is a wiki entry, this functions returns a plist."
                    (setq sans-extension (string-remove-suffix extension file))))
                org-multi-wiki-file-extensions)
          (-any (lambda (entry)
-                 (let ((dir (nth 1 entry)))
-                   (when (file-equal-p directory dir)
+                 (let ((dir (file-name-as-directory (nth 1 entry))))
+                   (when (or (file-equal-p directory dir)
+                             (string-prefix-p (expand-file-name dir)
+                                              (expand-file-name directory)))
                      (setq root-directory dir
                            id (car entry)))))
                org-multi-wiki-directories)

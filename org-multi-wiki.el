@@ -228,6 +228,17 @@ file name."
        (string-join it "-")))
 
 ;;;; File and directory infrastructure
+(define-minor-mode org-multi-wiki-mode
+  "Minor mode for wiki entries."
+  nil nil nil)
+
+(add-hook 'org-mode-hook 'org-multi-wiki-check-buffer)
+
+(defun org-multi-wiki-check-buffer ()
+  "Check if the current buffer is an wiki entry."
+  (when (org-multi-wiki-entry-file-p)
+    (org-multi-wiki-mode 1)))
+
 (defun org-multi-wiki-directory (&optional id)
   "Get the directory of a wiki ID."
   (let ((id (or id org-multi-wiki-current-directory-id)))

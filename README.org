@@ -1,3 +1,4 @@
+# -*- mode: org; mode: org-make-toc -*-
 * org-multi-wiki
 This is a package for working with multiple Org-based knowledge base sites inside a single Emacs session.
 It uses alphapapa's [[https://github.com/alphapapa/org-ql][helm-org-ql]] for searching, which makes navigation and entry creation seamless.
@@ -18,6 +19,9 @@ It uses alphapapa's [[https://github.com/alphapapa/org-ql][helm-org-ql]] for sea
     -  [[#quickly-creating-an-entry-in-a-particular-namespace][Quickly creating an entry in a particular namespace]]
 -  [[#details][Details]]
   -  [[#wiki-link-type][wiki link type]]
+  -  [[#file-name-escaping][File name escaping]]
+  -  [[#linking-to-a-particular-heading-in-a-file][Linking to a particular heading in a file]]
+  -  [[#entry-levels-and-entry-templates][Entry levels and entry templates]]
 -  [[#alternatives][Alternatives]]
 -  [[#license][License]]
 
@@ -200,11 +204,3 @@ It provides an infrastructure for building your own wiki system on top of Org mo
 org-multi-wiki supports multiple namespaces and takes advantage of =helm= and =org-ql= for providing a rich querying interface.
 ** License
 GPLv3
-** COMMENT Meta :noexport:
-:PROPERTIES:
-:TOC:      ignore
-:END:
-# The COMMENT keyword prevents GitHub's renderer from showing this entry.
-# Local Variables:
-# eval: (when (require (quote org-make-toc) nil t) (org-make-toc-mode t))
-# End:

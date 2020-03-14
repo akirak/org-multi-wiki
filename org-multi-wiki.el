@@ -97,23 +97,29 @@ The first one is used to create a new file by default."
   :type '(repeat string)
   :group 'org-multi-wiki)
 
-(defcustom org-multi-wiki-escape-file-name-fn #'org-multi-wiki-escape-file-name-camelcase-1
+(defcustom org-multi-wiki-escape-file-name-fn
+  #'org-multi-wiki-escape-file-name-camelcase-1
   "Function used to generated an escaped file name from a heading."
   :type 'function
   :group 'org-multi-wiki)
 
-(defcustom org-multi-wiki-entry-template-fn #'org-multi-wiki-default-entry-template-fn
+(defcustom org-multi-wiki-entry-template-fn
+  #'org-multi-wiki-default-entry-template-fn
   "Function to create an initial Org entry from a heading."
   :type 'function
   :group 'org-multi-wiki)
 
-(defcustom org-multi-wiki-display-buffer-fn #'pop-to-buffer
+(defcustom org-multi-wiki-display-buffer-fn
+  #'pop-to-buffer
   "Function used to display Org buffers."
   :type 'function
   :group 'org-multi-wiki)
 
 (defcustom org-multi-wiki-ignore-missing-directories nil
-  "When non-nil, return an empty result from `org-multi-wiki-entry-files' when the directory does not exist."
+  "Whether to prevent an error when a directory is missing.
+
+When non-nil, return an empty result from
+`org-multi-wiki-entry-files' when the directory does not exist."
   :type 'boolean
   :group 'org-multi-wiki)
 
@@ -128,7 +134,8 @@ The first one is used to create a new file by default."
   :type 'boolean
   :group 'org-multi-wiki)
 
-(defcustom org-multi-wiki-custom-id-escape-fn #'org-multi-wiki-default-custom-id-escape-fn
+(defcustom org-multi-wiki-custom-id-escape-fn
+  #'org-multi-wiki-default-custom-id-escape-fn
   "Function used to escape CUSTOM_ID properties.
 
 The function takes a heading as the argument."
@@ -167,7 +174,8 @@ This setting does not affect buffers that are already open"
   :type '(repeat string)
   :group 'org-multi-wiki)
 
-(defcustom org-multi-wiki-buffer-name-fn #'org-multi-wiki-buffer-name-1
+(defcustom org-multi-wiki-buffer-name-fn
+  #'org-multi-wiki-buffer-name-1
   "Function to determine the names of Org buffers.
 
 The function takes a plist as arguments.
@@ -224,7 +232,8 @@ See `org-multi-wiki-buffer-name-1' for an example."
 
 This function returns nil if the word should be removed from a
 file name."
-  (not (cl-member word org-multi-wiki-filename-removed-words :test #'string-equal)))
+  (not (cl-member word org-multi-wiki-filename-removed-words
+                  :test #'string-equal)))
 
 (defun org-multi-wiki-default-entry-template-fn (heading)
   "Generate an Org entry from HEADING."
@@ -256,7 +265,8 @@ file name."
   "Get the root directory of NAMESPACE."
   (let ((namespace (or namespace org-multi-wiki-current-namespace)))
     (or (car-safe (alist-get namespace org-multi-wiki-namespace-list))
-        (error "No entry exists for %s in org-multi-wiki-namespace-list" namespace))))
+        (error "No entry exists for %s in org-multi-wiki-namespace-list"
+               namespace))))
 
 (defun org-multi-wiki-select-namespace (&optional prompt)
   "Select a wiki id using `completing-read', with an optional PROMPT."
@@ -325,9 +335,10 @@ instead of file names."
                           (insert-file-contents file)
                           (setq buffer-file-name file)
                           (when org-multi-wiki-rename-buffer
-                            (rename-buffer (funcall org-multi-wiki-buffer-name-fn
-                                                    :namespace namespace :file file :dir dir)
-                                           t))
+                            (rename-buffer
+                             (funcall org-multi-wiki-buffer-name-fn
+                                      :namespace namespace :file file :dir dir)
+                             t))
                           (set-buffer-modified-p nil)
                           ;; Use delay-mode-hooks for faster loading.
                           (delay-mode-hooks (set-auto-mode))
@@ -356,7 +367,9 @@ instead of file names."
     (mapcar (lambda (fpath) (expand-file-name fpath dir))
             (apply #'process-lines
                    org-multi-wiki-rg-executable
-                   "-g" (format "*{%s}" (string-join org-multi-wiki-file-extensions ","))
+                   "-g" (format "*{%s}"
+                                (string-join org-multi-wiki-file-extensions
+                                             ","))
                    org-multi-wiki-rg-args))))
 
 (defun org-multi-wiki-expand-org-file-names (directory basename)
@@ -402,9 +415,12 @@ Either ID or DIR to the wiki should be specified."
            (root (if info
                      (nth 1 info)
                    (user-error "Wiki directory for %s is undefined" id)))
-           (file (or (cl-find-if #'file-exists-p (org-multi-wiki-expand-org-file-names root basename))
-                     (cl-find-if #'file-exists-p (org-multi-wiki-expand-org-file-names
-                                                  root (funcall org-multi-wiki-escape-file-name-fn basename))))))
+           (file (or (cl-find-if #'file-exists-p
+                                 (org-multi-wiki-expand-org-file-names root basename))
+                     (cl-find-if #'file-exists-p
+                                 (org-multi-wiki-expand-org-file-names
+                                  root
+                                  (funcall org-multi-wiki-escape-file-name-fn basename))))))
       (cond
        (file (find-file file))
        (t (let ((marker (car-safe (org-ql-select (org-multi-wiki-entry-files id)
@@ -496,14 +512,19 @@ ORIGIN-NS, if specified, is the namespace of the link orientation."
   "Support for the Org link completion mechanism."
   (let* ((origin-ns (plist-get (org-multi-wiki-entry-file-p) :namespace))
          (namespace (intern (completing-read "Wiki: "
-                                      (->> org-multi-wiki-namespace-list
-                                           (-map #'car)
-                                           (-map #'symbol-name))
-                                      nil t nil nil origin-ns)))
+                                             (->> org-multi-wiki-namespace-list
+                                                  (-map #'car)
+                                                  (-map #'symbol-name))
+                                             nil t nil nil origin-ns)))
          (files (org-multi-wiki-entry-files namespace))
-         (alist (mapcar (lambda (file) (cons (org-multi-wiki-link-file-name file :namespace namespace) file))
+         (alist (mapcar (lambda (file)
+                          (cons (org-multi-wiki-link-file-name
+                                 file :namespace namespace)
+                                file))
                         files))
-         (file (cdr (assoc (completing-read "File: " (mapcar #'car alist)) alist)))
+         (file (cdr (assoc (completing-read "File: "
+                                            (mapcar #'car alist))
+                           alist)))
          headings
          (plist (with-current-buffer
                     (or (find-buffer-visiting file)
@@ -514,7 +535,9 @@ ORIGIN-NS, if specified, is the namespace of the link orientation."
                      (push (propertize (string-trim-right (thing-at-point 'line t))
                                        'marker (point-marker))
                            headings))
-                   (let* ((heading (completing-read "Heading: " (nreverse headings) nil t))
+                   (let* ((heading (completing-read "Heading: "
+                                                    (nreverse headings)
+                                                    nil t))
                           (marker (get-char-property 0 'marker heading)))
                      (goto-char marker)
                      (org-multi-wiki--get-link-data origin-ns))))))

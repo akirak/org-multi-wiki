@@ -42,59 +42,59 @@
   "Keymap for the dummy source.
 Based on `helm-map'.")
 
-(defun helm-org-multi-wiki-create-entry-from-input (id)
-  "Create an entry in ID from the input in the dummy source."
+(defun helm-org-multi-wiki-create-entry-from-input (namespace)
+  "Create an entry in NAMESPACE from the input in the dummy source."
   (let ((inp (helm-get-selection)))
     (if (not (string-empty-p inp))
-        (helm-run-after-exit #'org-multi-wiki-visit-entry inp :id id)
+        (helm-run-after-exit #'org-multi-wiki-visit-entry inp :namespace namespace)
       (user-error "Input is empty"))))
 
 ;;;###autoload
-(defmacro helm-org-multi-wiki-def-create-entry-action (id)
-  "Define a command to creating an entry in ID via the dummy source."
-  `(defun ,(intern (format "helm-org-multi-wiki-create/%s" id)) ()
+(defmacro helm-org-multi-wiki-def-create-entry-action (namespace)
+  "Define a command to creating an entry in NAMESPACE via the dummy source."
+  `(defun ,(intern (format "helm-org-multi-wiki-create/%s" namespace)) ()
      (interactive)
-     (helm-org-multi-wiki-create-entry-from-input (quote ,id))))
+     (helm-org-multi-wiki-create-entry-from-input (quote ,namespace))))
 
 (cl-defun helm-org-multi-wiki-select-ids (&key prompt action)
-  "Select directory IDs using helm.
+  "Select directory namespaces using helm.
 
 PROMPT and ACTION are passed to helm."
   (helm :prompt (or prompt "Wikis")
         :sources
-        (list (helm-build-sync-source "Wiki ID"
+        (list (helm-build-sync-source "Wiki namespace"
                 :candidates (mapcar (lambda (x)
                                       (cons (format "%s (%s)"
                                                     (car x)
                                                     (nth 1 x))
                                             (car x)))
-                                    org-multi-wiki-directories)
+                                    org-multi-wiki-namespace-list)
                 :action (or action (lambda (candidate) (or (helm-marked-candidates) candidate)))))))
 
-(cl-defun helm-org-multi-wiki-make-dummy-source (ids &key first)
+(cl-defun helm-org-multi-wiki-make-dummy-source (namespaces &key first)
   "Create a dummy helm source.
 
-IDS and FIRST are the same as in `helm-org-multi-wiki'."
+NAMESPACES and FIRST are the same as in `helm-org-multi-wiki'."
   (helm-build-dummy-source "New entry"
     :keymap helm-org-multi-wiki-dummy-source-map
     :action
-    (mapcar (lambda (id)
+    (mapcar (lambda (namespace)
               (cons (format "Create a new entry in %s%s"
-                            id
-                            (if (equal id first)
+                            namespace
+                            (if (equal namespace first)
                                 " (current)"
                               ""))
                     (lambda (inp)
-                      (org-multi-wiki-visit-entry inp :id id))))
-            (if (and first (> (length ids) 1))
-                (cons first (-remove-item first ids))
-              ids))))
+                      (org-multi-wiki-visit-entry inp :namespace namespace))))
+            (if (and first (> (length namespaces) 1))
+                (cons first (-remove-item first namespaces))
+              namespaces))))
 
 ;;;###autoload
-(cl-defun helm-org-multi-wiki (&optional ids &key first)
+(cl-defun helm-org-multi-wiki (&optional namespaces &key first)
   "Visit an entry or create a new entry.
 
-IDS are are a list of directory ids.
+NAMESPACES are are a list of namespaces.
 It can be a list of symbols or a symbol.
 
 When FIRST is given, it is the default target of entry creation."
@@ -104,17 +104,17 @@ When FIRST is given, it is the default target of entry creation."
     ('(4) (let ((current-prefix-arg nil))
             (helm-org-multi-wiki-select-ids
              :action
-             (list (cons "Run helm-org-mult-wiki on selected IDs"
+             (list (cons "Run helm-org-mult-wiki on selected namespaces"
                          (lambda (_)
                            (helm-org-multi-wiki (helm-marked-candidates))))))))
-    (_ (let* ((ids (cl-etypecase ids
-                     ;; Normalize IDs to make it a list of symbols.
-                     (null (list org-multi-wiki-current-directory-id))
-                     (list ids)
-                     (symbol (list ids))))
+    (_ (let* ((namespaces (cl-etypecase namespaces
+                            ;; Normalize IDs to make it a list of symbols.
+                            (null (list org-multi-wiki-current-directory-id))
+                            (list namespaces)
+                            (symbol (list namespaces))))
               (boolean 'and)
               (helm-input-idle-delay helm-org-ql-input-idle-delay)
-              (files (->> ids
+              (files (->> namespaces
                           (--map (org-multi-wiki-entry-files it :as-buffers t))
                           (apply #'append))))
          (helm :prompt (format "Query (boolean %s): " (-> boolean symbol-name upcase))
@@ -122,15 +122,15 @@ When FIRST is given, it is the default target of entry creation."
                :sources
                (list (helm-org-ql-source files
                                          :name (format "Wiki (%s)"
-                                                       (mapconcat #'symbol-name ids ",")))
-                     (helm-org-multi-wiki-make-dummy-source ids :first first)))))))
+                                                       (mapconcat #'symbol-name namespaces ",")))
+                     (helm-org-multi-wiki-make-dummy-source namespaces :first first)))))))
 
 ;;;###autoload
 (defun helm-org-multi-wiki-all ()
   "Run `helm-org-multi-wiki' on all configured directories."
   (interactive)
-  (helm-org-multi-wiki (mapcar #'car org-multi-wiki-directories)
-                       :first org-multi-wiki-current-directory-id))
+  (helm-org-multi-wiki (mapcar #'car org-multi-wiki-namespace-list)
+                       :first org-multi-wiki-current-namespace))
 
 (provide 'helm-org-multi-wiki)
 ;;; helm-org-multi-wiki.el ends here

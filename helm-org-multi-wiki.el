@@ -3,8 +3,8 @@
 ;; Copyright (C) 2020 Akira Komamura
 
 ;; Author: Akira Komamura <akira.komamura@gmail.com>
-;; Version: 0.1
-;; Package-Requires: ((emacs "25.1") (org-multi-wiki "0.1") (org-ql "0.4") (helm-org-ql "0.4") (dash "2.12"))
+;; Version: 0.3
+;; Package-Requires: ((emacs "25.1") (org-multi-wiki "0.3") (org-ql "0.4") (helm-org-ql "0.4") (dash "2.12"))
 ;; Keywords: org, outlines
 ;; URL: https://github.com/akirak/org-multi-wiki
 

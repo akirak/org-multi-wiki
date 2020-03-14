@@ -135,6 +135,58 @@ File resolution is done by attempting the following schemes, in that order:
 3. It tries to find a file with a top-level heading matching =TITLE= in the directory.
 
 =subdir= is not supported now, but it will be added when this package supports recursive file search.
+*** File name escaping
+:PROPERTIES:
+:CREATED_TIME: [2020-03-14 Sat 20:04]
+:END:
+=org-multi-wiki= does some escaping of file names.
+The escaping function consists of multiple steps such as:
+
+- Split the title by whitespace, capitalize each word, and concatenate them. The result is usually upper camel cased.
+- If a word contains at least one upper case alphabet, the word is not capitalized and case is retained.
+- It eliminates symbols other than hyphens, dots, and underscores.
+- It eliminates words such as "a", "an", and "the".
+- It keeps non-ascii characters such as Chinese and Japanese.
+
+It is designed to be both filename-safe and friendly to the modern world with technical terms.
+However, you can alter the logic by setting =org-multi-wiki-escape-file-name-fn= to another function.
+*** Linking to a particular heading in a file
+You can link to a heading in a file either with a heading text or with a custom ID property.
+
+Linking with a custom ID is generally safer, because custom IDs don't change when you change headings.
+To enforce generation of a custom ID when storing a link, set =org-multi-wiki-want-custom-id= variable to t.
+
+Note that a link to a top-level heading does not contain a link fragment, i.e. a heading or a custom ID by default.
+See the following subsection for changing this behaviour.
+*** Entry levels and entry templates
+It is recommended that you include at least one heading in each Org file in wiki.
+The following structure is not recommended:
+
+#+begin_example
+#+title: My wiki page
+\* First heading
+#+end_example
+
+Instead, the following structure is recommended:
+
+#+begin_example
+\* My wiki page
+\** First heading
+#+end_example
+
+I write READMEs of my open source projects in this style, and if you use =helm-org-ql=, you won't be able to reach a file without a heading.
+
+Following this principle, the default file template of this package generates a heading rather than a file header.
+To change the template, set =org-multi-wiki-entry-template-fn= variable..
+
+Also, links to top-level heading don't contain a link fragment by default.
+This is because top-level headings are considered page titles in the structure and each file should contain only one top-level heading.
+However, depending on your needs, you may want to include multiple top-level headings in a single file.
+You can include a fragment in a link to a top-level heading using one of the following options:
+
+- Set
+=org-multi-wiki-top-level-link-fragments= to t, which is globally effective
+- Set =:top-level-link-fragments= option in =org-multi-wiki-namespace-list=, which is locally effective
 ** Alternatives
 There are several knowledge base systems for Emacs based on Org mode.
 

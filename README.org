@@ -1,6 +1,5 @@
 * org-multi-wiki
-This is a small wiki package for Emacs.
-Unlike other known existing solutions, this package supports multiple wikis on a single machine.
+This is a package for working with multiple Org-based knowledge base sites inside a single Emacs session.
 It uses alphapapa's [[https://github.com/alphapapa/org-ql][helm-org-ql]] for searching, which makes navigation and entry creation seamless.
 
 [[https://github.com/akirak/org-multi-wiki/workflows/lint/badge.svg?branch=master][https://github.com/akirak/org-multi-wiki/workflows/lint/badge.svg?branch=master]]
@@ -13,17 +12,20 @@ It uses alphapapa's [[https://github.com/alphapapa/org-ql][helm-org-ql]] for sea
 -  [[#installation][Installation]]
 -  [[#configuration][Configuration]]
 -  [[#usage][Usage]]
-  -  [[#switching-the-current-wiki][Switching the current wiki]]
+  -  [[#switching-the-current-namespace][Switching the current namespace]]
   -  [[#helm-org-multi-wiki][helm-org-multi-wiki]]
+    -  [[#running-on-particular-namespaces][Running on particular namespaces]]
+    -  [[#quickly-creating-an-entry-in-a-particular-namespace][Quickly creating an entry in a particular namespace]]
 -  [[#details][Details]]
   -  [[#wiki-link-type][wiki link type]]
 -  [[#alternatives][Alternatives]]
 -  [[#license][License]]
 
 ** Features
-- Capable of running multiple wikis simultaneously inside a single Emacs session. You can search contents from multiple directories, and you can create a new entry in any of the directory.
-- Using =helm-org-ql= for searching entries.
-- Add =wiki= link type to Org mode for safely resolving wiki directory locations based on directory IDs, not on absolute paths.
+- Support working with multiple directories inside a single Emacs session. You can define namespaces to uniquely identify wiki directories. You can search contents from one or more of the namespaces and create a new entry in any of the namespaces.
+- To search entries in wiki, you can use =org-ql= which is an expressive language designed for Org mode. A helm support is included in the package.
+- Extend =org-mode= with a custom =wiki= link type. It safely resolves locations of wiki contents through namespaces.
+- The directory of each namespace can be either recursive or non-recursive. If it's recursive, =org-multi-wiki= search Org files recursively.
 ** Prerequisites
 - Emacs 26.1 or later
 - Org 9.3 or later
@@ -42,40 +44,45 @@ Below is an example configuration through =use-package=:
 #+begin_src emacs-lisp
   (use-package org-multi-wiki
     :custom
-    (org-multi-wiki-directories '((default "~/org/")
-                                  (project1 "~/projects/project1/project1-docs")))
-    ;; ID of the initial current wiki
-    (org-multi-wiki-default-directory-id 'default))
+    (org-multi-wiki-namespace-list '((personal "~/org/personal/")
+                                     (ops "~/org/ops/")
+                                     (programming "~/org/programming/")
+                                     (client1 "~/projects/client1/client1-docs/")
+                                     (client2 "~/projects/client2/client2-docs/")))
+    ;; Namespace of a wiki
+    (org-multi-wiki-default-namespace 'personal))
 
   (use-package helm-org-multi-wiki)
  #+end_src
 
-First configure =org-multi-wiki-directories= variable.
+First configure =org-multi-wiki-namespace-list= variable.
 It is a list where each item is a list of the following items:
 
-- A symbol to identify the wiki
-- A directory containing Org files
+- A symbol to identify the wiki, called namespace
+- A directory containing Org files.
+
+You can append a plist to the list to set options on each namespace.
 
 For more options, see =org-multi-wiki= customization group.
 ** Usage
-*** Switching the current wiki
-This package supports a notion of /current wiki/.
-To switch the wiki, use =org-multi-wiki-switch=.
-Optionally, you can work on a specific wiki by calling functions with an ID.
+*** Switching the current namespace
+Most commands in this package work with a single namespace.
+To switch the namespace, use =org-multi-wiki-switch=.
+Optionally, you can work on a specific namespace by calling functions with a namespace.
 *** helm-org-multi-wiki
 =helm-org-multi-wiki= command is the main entry point in this package.
 It uses [[https://github.com/alphapapa/org-ql#helm-org-ql][helm-org-ql]] for search and a dummy source for entry creation.
 It is included in =helm-org-multi-wiki.el=.
 
-By default, it lets you select a heading or create a new entry in the current wiki.
+By default, it lets you select a heading or create a new entry in the current namespace.
 
 With a universal prefix argument (~C-u~), you can select wikis.
-You can select multiple wikis with ~C-SPC~.
-**** Running on particular wikis
+You can select multiple namespaces with ~C-SPC~.
+**** Running on particular namespaces
 :PROPERTIES:
 :CREATED_TIME: [2020-02-22 Sat 14:34]
 :END:
-You can also use it as a function which accepts an ID or a list of IDs.
+You can also use it as a function which accepts a namespace or a list of namespaces.
 You can define your own command to search queries in a specific wiki.
 
 #+begin_src emacs-lisp
@@ -84,15 +91,15 @@ You can define your own command to search queries in a specific wiki.
     (helm-org-multi-wiki '(project1)))
 #+end_src
 
-When multiple wikis are given, you can select a directory in which you want to create a new file.
+When multiple namespaces are given, you can select a directory in which you want to create a new file.
 This is available as alternative actions (~tab~) in the dummy source of Helm.
 
-The package also provides =helm-org-multi-wiki-all=, which performs search on all wikis.
-**** Quickly creating an entry in a particular wiki
+The package also provides =helm-org-multi-wiki-all=, which performs search on all namespaces.
+**** Quickly creating an entry in a particular namespace
 :PROPERTIES:
 :CREATED_TIME: [2020-02-22 Sat 14:35]
 :END:
-The dummy source has a dedicated keymap =helm-make-helm-org-multi-wiki-dummy-source-map= which lets you bind keys to create an entry in a particular wiki:
+The dummy source has a dedicated keymap =helm-make-helm-org-multi-wiki-dummy-source-map= which lets you bind keys to create an entry in a particular namespace:
 
 #+begin_src emacs-lisp
   (general-def :keymap 'helm-org-multi-wiki-dummy-source-map :package 'helm-org-multi-wiki
@@ -112,10 +119,11 @@ This package adds =wiki= link type to =org-link-parameters=.
 
 The link format complies to one of the following formats:
 
-- Linking with a custom ID: =WIKIID:[subdir/]TITLE[::#customid]=
-- Linking with a heading: =WIKIID:[subdir/]TITLE[::*heading]=
+- Linking with a custom ID: =NAMESPACE:[subdir/]TITLE[::#customid]=
+- Linking with a heading: =NAMESPACE:[subdir/]TITLE[::*heading]=
 
-=WIKIID= is the ID of a directory.
+=NAMESPACE= is the namespace of a wiki. It is omitted when linking to the same namespace.
+Note: This behaviour can be altered by setting =org-multi-wiki-allow-omit-namespace= to nil.
 
 =TITLE= can be either the base name of an escaped file name (i.e. without =.org=) or its original top-level heading.
 =::= and its following part is omitted when linking to a top-level heading in a file.
@@ -132,11 +140,12 @@ There are several knowledge base systems for Emacs based on Org mode.
 
 [[https://github.com/Kungsgeten/org-brain][org-brain]] and [[https://github.com/jethrokuan/org-roam][org-roam]] are especially powerful ones.
 org-brain is based on the idea of concept mapping, and org-roam is a rudimentary replica of another software named Roam.
-org-multi-wiki is not based on such a specific idea.
-It is a set of hacks to implement a wiki system on top of Helm and Org mode, so it is smaller and can be used in broader situations.
+org-multi-wiki is not based on such a specific framework.
+It focuses on search and entry creation and has built-in support for multiple namespaces.
+It provides an infrastructure for building your own wiki system on top of Org mode.
 
 [[https://github.com/abo-abo/plain-org-wiki][plain-org-wiki]] is the direct inspiration of this package.
-org-multi-wiki supports multiple wiki directories and takes advantage of =helm= and =org-ql= for providing a rich querying interface.
+org-multi-wiki supports multiple namespaces and takes advantage of =helm= and =org-ql= for providing a rich querying interface.
 ** License
 GPLv3
 ** COMMENT Meta :noexport:

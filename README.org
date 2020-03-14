@@ -188,8 +188,7 @@ This is because top-level headings are considered page titles in the structure a
 However, depending on your needs, you may want to include multiple top-level headings in a single file.
 You can include a fragment in a link to a top-level heading using one of the following options:
 
-- Set
-=org-multi-wiki-top-level-link-fragments= to t, which is globally effective
+- Set =org-multi-wiki-top-level-link-fragments= to t, which is globally effective
 - Set =:top-level-link-fragments= option in =org-multi-wiki-namespace-list=, which is locally effective
 ** Alternatives
 There are several knowledge base systems for Emacs based on Org mode.

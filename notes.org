@@ -1,3 +1,4 @@
+#+title: Notes for developing org-multi-wiki
 * DONE [#A] Enable org-multi-wiki-mode minor mode in wiki buffers
 CLOSED: [2020-03-13 Fri 02:09]
 :PROPERTIES:
@@ -16,7 +17,12 @@ This is a hack, but this seems to be the only way according to the current imple
 I will a custom variable to enable this feature.
 
 The entry format should be like ~wiki::TITLE~.
-* TODO [#A] Linking to non-org files in wiki directories
+* TODO [#A] Wording: Use "namespace" instead of "directory id"
+* TODO [#B] Visualisation: Namespace overview
+:PROPERTIES:
+:CREATED_TIME: [2020-03-14 Sat 17:54]
+:END:
+* TODO [#B] Linking to non-org files in wiki directories
 :PROPERTIES:
 :CREATED_TIME: [2020-02-17 Mon 04:13]
 :END:
@@ -26,6 +32,10 @@ Inline images inserted via the link scheme should be displayed properly.
 CLOSED: [2020-02-28 Fri 02:03]
 :PROPERTIES:
 :CREATED_TIME: [2020-02-17 Mon 04:16]
+:END:
+* TODO [#B] Visualisation: Namespace dependencies
+:PROPERTIES:
+:CREATED_TIME: [2020-03-14 Sat 17:54]
 :END:
 * TODO Prohibit refiling from wiki
 :PROPERTIES:

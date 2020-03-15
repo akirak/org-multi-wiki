@@ -17,7 +17,8 @@ This is a hack, but this seems to be the only way according to the current imple
 I will a custom variable to enable this feature.
 
 The entry format should be like ~wiki::TITLE~.
-* TODO [#A] Wording: Use "namespace" instead of "directory id"
+* DONE [#A] Wording: Use "namespace" instead of "directory id"
+CLOSED: [2020-03-15 Sun 15:48]
 * TODO [#B] Visualisation: Namespace overview
 :PROPERTIES:
 :CREATED_TIME: [2020-03-14 Sat 17:54]

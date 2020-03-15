@@ -566,35 +566,48 @@ ORIGIN-NS, if specified, is the namespace of the link orientation."
 
 ;;;###autoload
 (cl-defun org-multi-wiki-visit-entry (heading &key namespace)
-"Visit an Org file for HEADING in the directory with NAMESPACE."
-(let* ((dir (org-multi-wiki-directory namespace))
-       (filenames (org-multi-wiki-expand-org-file-names
-                   dir (funcall org-multi-wiki-escape-file-name-fn heading)))
-       (fpath (cl-find-if #'file-exists-p filenames)))
-  (unless (and dir (file-directory-p dir))
-    (user-error "Wiki directory is nil or missing: %s" dir))
-  (let* ((new (null fpath))
-         (fpath (or fpath (car filenames)))
-         (existing-buffer (find-buffer-visiting fpath))
-         ;; Set default-directory to allow directory-specific templates
-         (default-directory dir)
-         (buf (or existing-buffer
-                  (and new
-                       (with-current-buffer (create-file-buffer fpath)
-                         (setq buffer-file-name fpath)
-                         (insert (funcall org-multi-wiki-entry-template-fn heading))
-                         (set-auto-mode)
-                         (current-buffer)))
-                  (find-file-noselect fpath))))
-    (when (and (not existing-buffer)
-               org-multi-wiki-rename-buffer)
+  "Visit an Org file for HEADING in the directory in NAMESPACE."
+  (interactive (let ((namespace (or (and current-prefix-arg
+                                         (org-multi-wiki-select-namespace))
+                                    org-multi-wiki-current-namespace
+                                    (user-error "No current namespace"))))
+                 (list (completing-read (format "org-multi-wiki [namespace %s]: "
+                                                namespace)
+                                        (->> (org-multi-wiki-entry-files namespace)
+                                             (-map (lambda (file)
+                                                     (org-multi-wiki-link-file-name
+                                                      file :namespace namespace)))))
+                       :namespace namespace)))
+  (let* ((dir (org-multi-wiki-directory namespace))
+         (filenames (append (org-multi-wiki-expand-org-file-names
+                             dir heading)
+                            (org-multi-wiki-expand-org-file-names
+                             dir (funcall org-multi-wiki-escape-file-name-fn heading))))
+         (fpath (cl-find-if #'file-exists-p filenames)))
+    (unless (and dir (file-directory-p dir))
+      (user-error "Wiki directory is nil or missing: %s" dir))
+    (let* ((new (null fpath))
+           (fpath (or fpath (car filenames)))
+           (existing-buffer (find-buffer-visiting fpath))
+           ;; Set default-directory to allow directory-specific templates
+           (default-directory dir)
+           (buf (or existing-buffer
+                    (and new
+                         (with-current-buffer (create-file-buffer fpath)
+                           (setq buffer-file-name fpath)
+                           (insert (funcall org-multi-wiki-entry-template-fn heading))
+                           (set-auto-mode)
+                           (current-buffer)))
+                    (find-file-noselect fpath))))
+      (when (and (not existing-buffer)
+                 org-multi-wiki-rename-buffer)
+        (with-current-buffer buf
+          (rename-buffer (funcall org-multi-wiki-buffer-name-fn
+                                  :namespace namespace :file fpath :dir dir)
+                         t)))
       (with-current-buffer buf
-        (rename-buffer (funcall org-multi-wiki-buffer-name-fn
-                                :namespace namespace :file fpath :dir dir)
-                       t)))
-    (with-current-buffer buf
-      (org-multi-wiki-run-mode-hooks))
-    (funcall org-multi-wiki-display-buffer-fn buf))))
+        (org-multi-wiki-run-mode-hooks))
+      (funcall org-multi-wiki-display-buffer-fn buf))))
 
 (provide 'org-multi-wiki)
 ;;; org-multi-wiki.el ends here

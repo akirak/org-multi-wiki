@@ -13,7 +13,7 @@ It uses alphapapa's [[https://github.com/alphapapa/org-ql][helm-org-ql]] for sea
 -  [[#installation][Installation]]
 -  [[#configuration][Configuration]]
 -  [[#usage][Usage]]
-  -  [[#switching-the-current-namespace][Switching the current namespace]]
+  -  [[#the-current-namespace][The current namespace]]
   -  [[#helm-org-multi-wiki][helm-org-multi-wiki]]
     -  [[#running-on-particular-namespaces][Running on particular namespaces]]
     -  [[#quickly-creating-an-entry-in-a-particular-namespace][Quickly creating an entry in a particular namespace]]
@@ -69,10 +69,14 @@ You can append a plist to the list to set options on each namespace.
 
 For more options, see =org-multi-wiki= customization group.
 ** Usage
-*** Switching the current namespace
-Most commands in this package work with a single namespace.
+*** The current namespace
+Most commands in this package work with a single namespace: the current namespace.
+
+To open a file in the current namespace, use =org-multi-wiki-visit-entry= command.
 To switch the namespace, use =org-multi-wiki-switch=.
+
 Optionally, you can work on a specific namespace by calling functions with a namespace.
+For example, =org-multi-wiki-visit-entry= with a universal prefix argument (~C-u~) lets you select a namespace.
 *** helm-org-multi-wiki
 =helm-org-multi-wiki= command is the main entry point in this package.
 It uses [[https://github.com/alphapapa/org-ql#helm-org-ql][helm-org-ql]] for search and a dummy source for entry creation.

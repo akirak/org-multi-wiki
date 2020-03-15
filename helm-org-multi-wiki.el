@@ -56,7 +56,7 @@ Based on `helm-map'.")
      (interactive)
      (helm-org-multi-wiki-create-entry-from-input (quote ,namespace))))
 
-(cl-defun helm-org-multi-wiki-select-ids (&key prompt action)
+(cl-defun helm-org-multi-wiki-select-namespaces (&key prompt action)
   "Select directory namespaces using helm.
 
 PROMPT and ACTION are passed to helm."
@@ -102,14 +102,14 @@ When FIRST is given, it is the default target of entry creation."
   ;; Based on the implementation of helm-org-ql.
   (pcase current-prefix-arg
     ('(4) (let ((current-prefix-arg nil))
-            (helm-org-multi-wiki-select-ids
+            (helm-org-multi-wiki-select-namespaces
              :action
              (list (cons "Run helm-org-mult-wiki on selected namespaces"
                          (lambda (_)
                            (helm-org-multi-wiki (helm-marked-candidates))))))))
     (_ (let* ((namespaces (cl-etypecase namespaces
-                            ;; Normalize IDs to make it a list of symbols.
-                            (null (list org-multi-wiki-current-directory-id))
+                            ;; Normalize namespaces to make it a list of symbols.
+                            (null (list org-multi-wiki-current-namespace))
                             (list namespaces)
                             (symbol (list namespaces))))
               (boolean 'and)

@@ -270,8 +270,10 @@ file name."
 
 (defun org-multi-wiki-select-namespace (&optional prompt)
   "Select a wiki id using `completing-read', with an optional PROMPT."
-  (intern (completing-read (or prompt "Wiki: ")
-                           (mapcar #'car org-multi-wiki-namespace-list))))
+  (intern (completing-read (or prompt (format "Wiki [current %s]: "
+                                              org-multi-wiki-current-namespace))
+                           (mapcar #'car org-multi-wiki-namespace-list)
+                           nil t nil nil org-multi-wiki-current-namespace)))
 
 (defun org-multi-wiki-entry-file-p (&optional file)
   "Check if FILE is a wiki entry.

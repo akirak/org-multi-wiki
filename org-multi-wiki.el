@@ -357,9 +357,12 @@ instead of file names."
 ;; This is effective when an entry is visited by `helm-org-ql'.
 (advice-add 'org-show-entry :before #'org-multi-wiki-run-mode-hooks)
 
-(cl-defun org-multi-wiki-buffer-name-1 (&key id file dir)
-  "Return a buffer name suitable for Wiki."
-  (format "%s:%s" id (file-relative-name file dir)))
+(cl-defun org-multi-wiki-buffer-name-1 (&key namespace file dir)
+  "Return a buffer name suitable for Wiki.
+
+NAMESPACE is the name space of the wiki, FILE is the file name,
+and DIR is the root directory of the namespace."
+  (format "%s:%s" namespace (file-relative-name file dir)))
 
 (defun org-multi-wiki--org-files-recursively (dir)
   "Get a list of Org files in DIR recursively."
@@ -378,13 +381,13 @@ instead of file names."
           (expand-file-name (concat basename extension) directory))
         org-multi-wiki-file-extensions))
 
-(cl-defun org-multi-wiki-link-file-name (file &key id dir)
+(cl-defun org-multi-wiki-link-file-name (file &key namespace dir)
   "Return a file name in an Org link.
 
 FILE is an absolute file name to an Org file.
 
-Either ID or DIR to the wiki should be specified."
-  (let ((dir (or dir (org-multi-wiki-directory id)))
+Either NAMESPACE or DIR to the wiki should be specified."
+  (let ((dir (or dir (org-multi-wiki-directory namespace)))
         (extension (-find (lambda (extension)
                             (string-suffix-p extension file))
                           org-multi-wiki-file-extensions)))

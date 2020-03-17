@@ -60,7 +60,7 @@ Based on `helm-map'.")
   "Select directory namespaces using helm.
 
 PROMPT and ACTION are passed to helm."
-  (helm :prompt (or prompt "Wikis")
+  (helm :prompt (or prompt "org-multi-wiki namespaces: ")
         :sources
         (list (helm-build-sync-source "Wiki namespace"
                 :candidates (mapcar (lambda (x)

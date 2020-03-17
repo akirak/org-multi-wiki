@@ -58,8 +58,8 @@ Based on `helm-map'.")
 
 (defsubst helm-org-multi-wiki--format-ns-cand (x)
   "Format a helm candidate label of a namespace entry X."
-  (-let (((ns root . _) x))
-    (cons (format "%s (%s)" ns root) ns)))
+  (pcase-let ((`(,ns ,root . _) x))
+    (format "%s (%s)" ns root)))
 
 (defclass helm-org-multi-wiki-source-namespace-symbol (helm-source-sync)
   ((candidates

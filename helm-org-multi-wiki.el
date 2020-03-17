@@ -36,6 +36,11 @@
 (require 'org-ql)
 (require 'helm-org-ql)
 
+(defgroup helm-org-multi-wiki nil
+  "Helm interface to org-multi-wiki."
+  :group 'org-multi-wiki
+  :group 'helm)
+
 (defvar helm-org-multi-wiki-dummy-source-map
   (let ((map (copy-keymap helm-map)))
     map)

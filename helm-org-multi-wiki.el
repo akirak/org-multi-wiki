@@ -60,7 +60,7 @@ Based on `helm-map'.")
   "Select directory namespaces using helm.
 
 PROMPT and ACTION are passed to helm."
-  (helm :prompt (or prompt "Wikis")
+  (helm :prompt (or prompt "org-multi-wiki namespaces: ")
         :sources
         (list (helm-build-sync-source "Wiki namespace"
                 :candidates (mapcar (lambda (x)
@@ -109,7 +109,14 @@ When FIRST is given, it is the default target of entry creation."
                            (helm-org-multi-wiki (helm-marked-candidates))))))))
     (_ (let* ((namespaces (cl-etypecase namespaces
                             ;; Normalize namespaces to make it a list of symbols.
-                            (null (list org-multi-wiki-current-namespace))
+                            (null (if org-multi-wiki-current-namespace
+                                      (list org-multi-wiki-current-namespace)
+                                    (let ((namespaces (helm-org-multi-wiki-select-namespaces
+                                                       "Switch to a namespace: ")))
+                                      (unless namespaces
+                                        (user-error "Please select a namespace"))
+                                      (org-multi-wiki-switch (car-safe namespaces))
+                                      namespaces)))
                             (list namespaces)
                             (symbol (list namespaces))))
               (boolean 'and)

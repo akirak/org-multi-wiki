@@ -56,20 +56,40 @@ Based on `helm-map'.")
      (interactive)
      (helm-org-multi-wiki-create-entry-from-input (quote ,namespace))))
 
+(defsubst helm-org-multi-wiki--format-ns-cand (x)
+  "Format a helm candidate label of a namespace entry X."
+  (-let (((ns root . _) x))
+    (cons (format "%s (%s)" ns root) ns)))
+
+(defclass helm-org-multi-wiki-source-namespace-symbol (helm-source-sync)
+  ((candidates
+    :initform (lambda ()
+                (-map (lambda (x)
+                        (cons (helm-org-multi-wiki--format-ns-cand x)
+                              (car x)))
+                      org-multi-wiki-namespace-list)))))
+
+;; Like `helm-org-multi-wiki-source-namespace-symbol' in the above,
+;; but returns the whole alist entry.
+(defclass helm-org-multi-wiki-source-namespace-entry (helm-source-sync)
+  ((candidates
+    :initform (lambda ()
+                (-map (lambda (x)
+                        (cons (helm-org-multi-wiki--format-ns-cand x)
+                              x))
+                      org-multi-wiki-namespace-list)))))
+
 (cl-defun helm-org-multi-wiki-select-namespaces (&key prompt action)
   "Select directory namespaces using helm.
 
 PROMPT and ACTION are passed to helm."
   (helm :prompt (or prompt "org-multi-wiki namespaces: ")
         :sources
-        (list (helm-build-sync-source "Wiki namespace"
-                :candidates (mapcar (lambda (x)
-                                      (cons (format "%s (%s)"
-                                                    (car x)
-                                                    (nth 1 x))
-                                            (car x)))
-                                    org-multi-wiki-namespace-list)
-                :action (or action (lambda (candidate) (or (helm-marked-candidates) candidate)))))))
+        (helm-make-source "Wiki namespace"
+            'helm-org-multi-wiki-source-namespace-symbol
+          :action (or action
+                      (lambda (candidate)
+                        (or (helm-marked-candidates) candidate))))))
 
 (cl-defun helm-org-multi-wiki-make-dummy-source (namespaces &key first)
   "Create a dummy helm source.

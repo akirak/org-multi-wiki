@@ -19,6 +19,11 @@ I will a custom variable to enable this feature.
 The entry format should be like ~wiki::TITLE~.
 * DONE [#A] Wording: Use "namespace" instead of "directory id"
 CLOSED: [2020-03-15 Sun 15:48]
+* [#A] Namespace dashboard
+:PROPERTIES:
+:CREATED_TIME: [2020-03-18 Wed 01:03]
+:END:
+How should I implement one?
 * TODO [#B] Visualisation: Namespace overview
 :PROPERTIES:
 :CREATED_TIME: [2020-03-14 Sat 17:54]

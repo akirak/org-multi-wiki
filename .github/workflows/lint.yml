@@ -17,7 +17,7 @@ jobs:
           - emacs-26-3
     steps:
     - name: install nix
-      uses: cachix/install-nix-action@v5
+      uses: cachix/install-nix-action@v7
     - name: install cachix
       run: nix-env -iA cachix -f https://cachix.org/api/v1/install
     - name: enable cachix for emacs-ci

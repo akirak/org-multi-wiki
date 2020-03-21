@@ -585,15 +585,16 @@ e.g. when `org-capture' is run."
                                                       file :namespace namespace)))))
                        :namespace namespace)))
   (let* ((dir (org-multi-wiki-directory namespace))
+         (escaped-filenames (org-multi-wiki-expand-org-file-names
+                             dir (funcall org-multi-wiki-escape-file-name-fn heading)))
          (filenames (append (org-multi-wiki-expand-org-file-names
                              dir heading)
-                            (org-multi-wiki-expand-org-file-names
-                             dir (funcall org-multi-wiki-escape-file-name-fn heading))))
+                            escaped-filenames))
          (fpath (cl-find-if #'file-exists-p filenames)))
     (unless (and dir (file-directory-p dir))
       (user-error "Wiki directory is nil or missing: %s" dir))
     (let* ((new (null fpath))
-           (fpath (or fpath (car filenames)))
+           (fpath (or fpath (car escaped-filenames)))
            (existing-buffer (find-buffer-visiting fpath))
            ;; Set default-directory to allow directory-specific templates
            (default-directory dir)

@@ -450,7 +450,7 @@ Either NAMESPACE or DIR to the wiki should be specified."
 ;;;###autoload
 (defun org-multi-wiki-store-link ()
   "Store a link."
-  (let* ((plist (org-multi-wiki--get-link-data))
+  (let* ((plist (org-multi-wiki--get-link-data nil (not (called-interactively-p 'any))))
          (link-brackets (org-link-make-string (plist-get plist :link)
                                               (plist-get plist :headline))))
     (org-link-store-props :type "wiki"
@@ -460,10 +460,15 @@ Either NAMESPACE or DIR to the wiki should be specified."
                           :description (plist-get plist :headline))
     link-brackets))
 
-(defun org-multi-wiki--get-link-data (&optional origin-ns)
+(defun org-multi-wiki--get-link-data (&optional origin-ns
+                                                stored-noninteractively)
   "Return data needed for generating a link.
 
-ORIGIN-NS, if specified, is the namespace of the link orientation."
+ORIGIN-NS, if specified, is the namespace of the link orientation.
+
+STORED-NONINTERACTIVELY should be set to non-nil if
+`org-multi-wiki-store-link' is not called interactively,
+e.g. when `org-capture' is run."
   (when (derived-mode-p 'org-mode)
     (when-let (plist (org-multi-wiki-entry-file-p))
       (when (org-before-first-heading-p)
@@ -471,6 +476,7 @@ ORIGIN-NS, if specified, is the namespace of the link orientation."
       (-let* (((level _ _ _ headline _) (org-heading-components))
               (custom-id (or (org-entry-get nil "CUSTOM_ID")
                              (and org-multi-wiki-want-custom-id
+                                  (not stored-noninteractively)
                                   (or (org-multi-wiki--top-level-link-fragments (plist-get plist :namespace))
                                       (> level 1))
                                   (let* ((default (funcall org-multi-wiki-custom-id-escape-fn headline))

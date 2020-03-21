@@ -26,10 +26,12 @@ It uses alphapapa's [[https://github.com/alphapapa/org-ql][helm-org-ql]] for sea
 -  [[#license][License]]
 
 ** Features
-- Support working with multiple directories inside a single Emacs session. You can define namespaces to uniquely identify wiki directories. You can search contents from one or more of the namespaces and create a new entry in any of the namespaces.
-- To search entries in wiki, you can use =org-ql= which is an expressive language designed for Org mode. A helm support is included in the package.
-- Extend =org-mode= with a custom =wiki= link type. It safely resolves locations of wiki contents through namespaces.
-- The directory of each namespace can be either recursive or non-recursive. If it's recursive, =org-multi-wiki= search Org files recursively.
+=org-multi-wiki= is an Org-based wiki system for Emacs with the following features:
+
+- It supports working with multiple isolated directories inside a single Emacs session. It lets you define namespaces to uniquely identify content groups. You can search contents from one or more of the namespaces and create a new entry in any of them.
+- It supports =org-ql= for searching contents in wikis. =org-ql= is an expressive query language designed for Org mode. A helm support is included.
+- It adds a custom =wiki= link type to =org-mode= to resolve locations of wiki files across namespaces.
+- The directory of each namespace can be either recursive or non-recursive. If it's set to recursive, =org-multi-wiki= also searches Org files in subdirectories recursively.
 ** Prerequisites
 - Emacs 26.1 or later
 - Org 9.3 or later

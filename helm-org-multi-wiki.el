@@ -145,14 +145,11 @@ When FIRST is given, it is the default target of entry creation."
                             (list namespaces)
                             (symbol (list namespaces))))
               (boolean 'and)
-              (helm-input-idle-delay helm-org-ql-input-idle-delay)
-              (files (->> namespaces
-                          (--map (org-multi-wiki-entry-files it :as-buffers t))
-                          (apply #'append))))
+              (helm-input-idle-delay helm-org-ql-input-idle-delay))
          (helm :prompt (format "Query (boolean %s): " (-> boolean symbol-name upcase))
                :buffer "*helm org multi wiki*"
                :sources
-               (list (helm-org-ql-source files
+               (list (helm-org-ql-source (lambda () (org-multi-wiki-namespaces-buffers namespaces))
                                          :name (format "Wiki (%s)"
                                                        (mapconcat #'symbol-name namespaces ",")))
                      (helm-org-multi-wiki-make-dummy-source namespaces :first first)))))))

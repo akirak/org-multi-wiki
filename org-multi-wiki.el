@@ -349,6 +349,13 @@ instead of file names."
                 files)
       files)))
 
+;;;###autoload
+(defun org-multi-wiki-namespaces-buffers (namespaces)
+  "Return buffers for NAMESPACES."
+  (->> namespaces
+       (--map (org-multi-wiki-entry-files it :as-buffers t))
+       (apply #'append)))
+
 (defun org-multi-wiki-run-mode-hooks ()
   "Run mode hooks delayed by org-multi-wiki."
   (when org-multi-wiki-mode-hooks-delayed

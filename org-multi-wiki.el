@@ -450,9 +450,9 @@ Either NAMESPACE or DIR to the wiki should be specified."
 ;;;###autoload
 (defun org-multi-wiki-store-link ()
   "Store a link."
-  (let* ((plist (org-multi-wiki--get-link-data nil (not (called-interactively-p 'any))))
-         (link-brackets (org-link-make-string (plist-get plist :link)
-                                              (plist-get plist :headline))))
+  (when-let* ((plist (org-multi-wiki--get-link-data nil (not (called-interactively-p 'any))))
+              (link-brackets (org-link-make-string (plist-get plist :link)
+                                                   (plist-get plist :headline))))
     (org-link-store-props :type "wiki"
                           ;; :file (plist-get plist :file)
                           ;; :node headline

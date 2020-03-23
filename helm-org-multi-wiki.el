@@ -96,6 +96,39 @@ PROMPT and ACTION are passed to helm."
                       (lambda (candidate)
                         (or (helm-marked-candidates) candidate))))))
 
+(defvar helm-org-multi-wiki-buffers nil)
+
+(defvar helm-org-multi-wiki-map
+  (make-composed-keymap nil helm-org-ql-map))
+
+(defcustom helm-org-multi-wiki-actions nil
+  "Alist of actions in `helm-org-multi-wiki'.
+
+This can be nil.  In that case, `helm-org-ql-actions' will be
+inherited."
+  :type 'alist)
+
+;; Based on `helm-org-ql-source' from helm-org-ql.el at 0.5-pre.
+(defclass helm-org-multi-wiki-source (helm-source-sync)
+  ((candidates :initform (lambda ()
+                           (let* ((query (org-ql--plain-query helm-pattern))
+                                  (window-width (window-width (helm-window))))
+                             (when query
+                               (with-current-buffer (helm-buffer-get)
+                                 (setq helm-org-ql-buffers-files helm-org-multi-wiki-buffers))
+                               (ignore-errors
+                                 ;; Ignore errors that might be caused by partially typed queries.
+                                 (org-ql-select helm-org-multi-wiki-buffers query
+                                   :action `(helm-org-ql--heading ,window-width)))))))
+   (match :initform #'identity)
+   (fuzzy-match :initform nil)
+   (multimatch :initform nil)
+   (nohighlight :initform t)
+   (volatile :initform t)
+   (keymap :initform 'helm-org-multi-wiki-map)
+   (action :initform (or helm-org-multi-wiki-actions
+                         helm-org-ql-actions))))
+
 (cl-defun helm-org-multi-wiki-make-dummy-source (namespaces &key first)
   "Create a dummy helm source.
 
@@ -149,12 +182,13 @@ When FIRST is given, it is the default target of entry creation."
               (files (->> namespaces
                           (--map (org-multi-wiki-entry-files it :as-buffers t))
                           (apply #'append))))
+         (setq helm-org-multi-wiki-buffers files)
          (helm :prompt (format "Query (boolean %s): " (-> boolean symbol-name upcase))
                :buffer "*helm org multi wiki*"
                :sources
-               (list (helm-org-ql-source files
-                                         :name (format "Wiki (%s)"
-                                                       (mapconcat #'symbol-name namespaces ",")))
+               (list (helm-make-source (format "Wiki (%s)"
+                                               (mapconcat #'symbol-name namespaces ","))
+                         'helm-org-multi-wiki-source)
                      (helm-org-multi-wiki-make-dummy-source namespaces :first first)))))))
 
 ;;;###autoload

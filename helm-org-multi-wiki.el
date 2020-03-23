@@ -112,12 +112,19 @@ inherited."
   "Query sent when no input is in the minibuffer."
   :type 'sexp)
 
+(defcustom helm-org-multi-wiki-query-parser #'org-ql--plain-query
+  "Function used to parse the plain query.
+
+The function should take a plain query of org-ql as the argument
+and return an S expression query."
+  :type 'function)
+
 ;; Based on `helm-org-ql-source' from helm-org-ql.el at 0.5-pre.
 (defclass helm-org-multi-wiki-source (helm-source-sync)
   ((candidates :initform (lambda ()
                            (let* ((query (if (string-empty-p helm-pattern)
                                              helm-org-multi-wiki-default-query
-                                           (org-ql--plain-query helm-pattern)))
+                                           (funcall helm-org-multi-wiki-query-parser helm-pattern)))
                                   (window-width (window-width (helm-window))))
                              (when query
                                (with-current-buffer (helm-buffer-get)

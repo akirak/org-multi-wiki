@@ -196,6 +196,24 @@ You can include a fragment in a link to a top-level heading using one of the fol
 
 - Set =org-multi-wiki-top-level-link-fragments= to t, which is globally effective
 - Set =:top-level-link-fragments= option in =org-multi-wiki-namespace-list=, which is locally effective
+*** Buffer names
+:PROPERTIES:
+:CREATED_TIME: [2020-03-24 Tue 00:53]
+:END:
+To let the user easily distinguish between wikis, =org-multi-wiki= renames file buffers according to their respective namespaces when it opens Org files:
+
+[[file:screenshots/helm-org-multi-wiki-multi-ns-1.png]]
+
+To turn off this behavior, set =org-multi-wiki-rename-buffer= to nil.
+*** Customizing the helm source
+:PROPERTIES:
+:CREATED_TIME: [2020-03-24 Tue 00:53]
+:END:
+Although =helm-org-multi-wiki= is based on =helm-org-ql=, it allows further customizations to make it slightly different from the original package:
+
+- It can display items when no query is given in the minibuffer. By default, it displays top-level items. You can customize this via =helm-org-multi-wiki-default-query= variable. This should be an S-expression query accepted by =org-ql=.
+- It allows you to customize the query parser by setting =helm-org-multi-wiki-query-parser= to a different value. By default, it uses the plain query parser of =org-ql=.
+- You can change the keymap and the action by setting =helm-org-multi-wiki-map= and =helm-org-ql-actions=, respectively, By default, it uses the same values as =helm-org-ql=.
 ** Alternatives
 There are several knowledge base systems for Emacs based on Org mode.
 

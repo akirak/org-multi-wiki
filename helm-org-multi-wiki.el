@@ -108,10 +108,16 @@ This can be nil.  In that case, `helm-org-ql-actions' will be
 inherited."
   :type 'alist)
 
+(defcustom helm-org-multi-wiki-default-query '(level 1)
+  "Query sent when no input is in the minibuffer."
+  :type 'sexp)
+
 ;; Based on `helm-org-ql-source' from helm-org-ql.el at 0.5-pre.
 (defclass helm-org-multi-wiki-source (helm-source-sync)
   ((candidates :initform (lambda ()
-                           (let* ((query (org-ql--plain-query helm-pattern))
+                           (let* ((query (if (string-empty-p helm-pattern)
+                                             helm-org-multi-wiki-default-query
+                                           (org-ql--plain-query helm-pattern)))
                                   (window-width (window-width (helm-window))))
                              (when query
                                (with-current-buffer (helm-buffer-get)

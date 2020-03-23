@@ -137,7 +137,7 @@ When FIRST is given, it is the default target of entry creation."
                             (null (if org-multi-wiki-current-namespace
                                       (list org-multi-wiki-current-namespace)
                                     (let ((namespaces (helm-org-multi-wiki-select-namespaces
-                                                       "Switch to a namespace: ")))
+                                                       :prompt                                                      "Switch to a namespace: ")))
                                       (unless namespaces
                                         (user-error "Please select a namespace"))
                                       (org-multi-wiki-switch (car-safe namespaces))

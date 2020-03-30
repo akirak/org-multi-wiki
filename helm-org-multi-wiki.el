@@ -47,6 +47,10 @@
   "Keymap for the dummy source.
 Based on `helm-map'.")
 
+(defcustom helm-org-multi-wiki-show-files t
+  "Whether to prepend file list in `helm-org-multi-wiki'."
+  :type 'boolean)
+
 (defun helm-org-multi-wiki-create-entry-from-input (namespace)
   "Create an entry in NAMESPACE from the input in the dummy source."
   (let ((inp (helm-get-selection)))
@@ -142,6 +146,19 @@ and return an S expression query."
    (action :initform (or helm-org-multi-wiki-actions
                          helm-org-ql-actions))))
 
+(defclass helm-org-multi-wiki-source-buffers (helm-source-sync)
+  ((candidates :initform (lambda ()
+                           (-map (lambda (buf)
+                                   (cons (buffer-name buf) buf))
+                                 helm-org-multi-wiki-buffers)))
+   (persistent-action :initform (lambda (buf)
+                                  (switch-to-buffer buf)
+                                  (widen)
+                                  (goto-char (point-min))
+                                  (when (re-search-forward org-heading-regexp nil t)
+                                    (org-show-entry))))
+   (action :initform #'switch-to-buffer)))
+
 (cl-defun helm-org-multi-wiki-make-dummy-source (namespaces &key first)
   "Create a dummy helm source.
 
@@ -183,7 +200,7 @@ When FIRST is given, it is the default target of entry creation."
                             (null (if org-multi-wiki-current-namespace
                                       (list org-multi-wiki-current-namespace)
                                     (let ((namespaces (helm-org-multi-wiki-select-namespaces
-                                                       :prompt                                                      "Switch to a namespace: ")))
+                                                       :prompt "Switch to a namespace: ")))
                                       (unless namespaces
                                         (user-error "Please select a namespace"))
                                       (org-multi-wiki-switch (car-safe namespaces))
@@ -194,15 +211,19 @@ When FIRST is given, it is the default target of entry creation."
               (helm-input-idle-delay helm-org-ql-input-idle-delay)
               (files (->> namespaces
                           (--map (org-multi-wiki-entry-files it :as-buffers t))
-                          (apply #'append))))
+                          (apply #'append)))
+              (namespace-str (mapconcat #'symbol-name namespaces ",")))
          (setq helm-org-multi-wiki-buffers files)
          (helm :prompt (format "Query (boolean %s): " (-> boolean symbol-name upcase))
                :buffer "*helm org multi wiki*"
                :sources
-               (list (helm-make-source (format "Wiki (%s)"
-                                               (mapconcat #'symbol-name namespaces ","))
-                         'helm-org-multi-wiki-source)
-                     (helm-org-multi-wiki-make-dummy-source namespaces :first first)))))))
+               (delq nil
+                     (list (when helm-org-multi-wiki-show-files
+                             (helm-make-source (format "Wiki files in %s" namespace-str)
+                                 'helm-org-multi-wiki-source-buffers))
+                           (helm-make-source (format "Wiki (%s)" namespace-str)
+                               'helm-org-multi-wiki-source)
+                           (helm-org-multi-wiki-make-dummy-source namespaces :first first))))))))
 
 ;;;###autoload
 (defun helm-org-multi-wiki-all ()

@@ -51,6 +51,20 @@ Based on `helm-map'.")
   "Whether to prepend file list in `helm-org-multi-wiki'."
   :type 'boolean)
 
+(defcustom helm-org-multi-wiki-namespace-actions
+  (quote (("Switch" . org-multi-wiki-switch)
+          ("Search in namespace(s)"
+           . (lambda (ns)
+               (helm-org-multi-wiki (or (helm-marked-candidates) ns))))))
+  "Alist of actions in `helm-org-multi-wiki-namespace'."
+  :type '(alist :key-type string :value-type (or symbol function)))
+
+(defcustom helm-org-multi-wiki-namespace-persistent-action
+  ;; TODO: Add a persistent action for namespace
+  nil
+  "Persistent action in `helm-org-multi-wiki-namespace'."
+  :type 'function)
+
 (defun helm-org-multi-wiki-create-entry-from-input (namespace)
   "Create an entry in NAMESPACE from the input in the dummy source."
   (let ((inp (helm-get-selection)))
@@ -76,7 +90,8 @@ Based on `helm-map'.")
                 (-map (lambda (x)
                         (cons (helm-org-multi-wiki--format-ns-cand x)
                               (car x)))
-                      org-multi-wiki-namespace-list)))))
+                      org-multi-wiki-namespace-list)))
+   (persistent-action :initform 'helm-org-multi-wiki-namespace-persistent-action)))
 
 ;; Like `helm-org-multi-wiki-source-namespace-symbol' in the above,
 ;; but returns the whole alist entry.
@@ -88,17 +103,22 @@ Based on `helm-map'.")
                               x))
                       org-multi-wiki-namespace-list)))))
 
-(cl-defun helm-org-multi-wiki-select-namespaces (&key prompt action)
+(cl-defun helm-org-multi-wiki-namespace (&key prompt action)
   "Select directory namespaces using helm.
 
 PROMPT and ACTION are passed to helm."
-  (helm :prompt (or prompt "org-multi-wiki namespaces: ")
-        :sources
-        (helm-make-source "Wiki namespace"
-            'helm-org-multi-wiki-source-namespace-symbol
-          :action (or action
+  (interactive)
+  (let ((prompt (or prompt "org-multi-wiki namespaces: "))
+        (action (or action
+                    (if (called-interactively-p)
+                        helm-org-multi-wiki-namespace-actions
                       (lambda (candidate)
                         (or (helm-marked-candidates) candidate))))))
+    (helm :prompt prompt
+          :sources
+          (helm-make-source "Wiki namespace"
+              'helm-org-multi-wiki-source-namespace-symbol
+            :action action))))
 
 (defvar helm-org-multi-wiki-buffers nil)
 
@@ -190,7 +210,7 @@ When FIRST is given, it is the default target of entry creation."
   ;; Based on the implementation of helm-org-ql.
   (pcase current-prefix-arg
     ('(4) (let ((current-prefix-arg nil))
-            (helm-org-multi-wiki-select-namespaces
+            (helm-org-multi-wiki-namespace
              :action
              (list (cons "Run helm-org-mult-wiki on selected namespaces"
                          (lambda (_)
@@ -199,7 +219,7 @@ When FIRST is given, it is the default target of entry creation."
                             ;; Normalize namespaces to make it a list of symbols.
                             (null (if org-multi-wiki-current-namespace
                                       (list org-multi-wiki-current-namespace)
-                                    (let ((namespaces (helm-org-multi-wiki-select-namespaces
+                                    (let ((namespaces (helm-org-multi-wiki-namespace
                                                        :prompt "Switch to a namespace: ")))
                                       (unless namespaces
                                         (user-error "Please select a namespace"))

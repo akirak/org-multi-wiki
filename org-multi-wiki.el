@@ -206,6 +206,10 @@ See `org-multi-wiki-buffer-name-1' for an example."
 (defvar-local org-multi-wiki-mode-hooks-delayed nil
   "Whether `run-mode-hooks' has been delayed in the buffer.")
 
+(defvar org-multi-wiki-gpg-skip-file-list nil)
+(defvar org-multi-wiki-gpg-skip-namespace-list nil)
+(defvar org-multi-wiki-gpg-skip-globally nil)
+
 ;;;; Macros
 (defmacro org-multi-wiki--def-option (key)
   "Define a function to retrieve KEY option."
@@ -337,33 +341,58 @@ If NAMESPACE is omitted, the current namespace is used, as in
 
 If AS-BUFFERS is non-nil, this function returns a list of buffers
 instead of file names."
-  (let* ((dir (org-multi-wiki-directory namespace))
+  (let* ((namespace (or namespace org-multi-wiki-current-namespace))
+         (dir (org-multi-wiki-directory namespace))
          (recursive (org-multi-wiki--plist-get :recursive namespace))
          (files (if recursive
                     (org-multi-wiki--org-files-recursively dir)
                   (directory-files dir t org-multi-wiki-file-regexp))))
     (if as-buffers
-        (mapcar (lambda (file)
-                  (or (find-buffer-visiting file)
-                      (let* ((default-directory (file-name-directory file))
-                             (buf (create-file-buffer file)))
-                        ;; Based on the implementation by @kungsgeten
-                        ;; for faster loading of many Org files.
-                        ;; https://github.com/alphapapa/org-ql/issues/88#issuecomment-570568341
-                        (with-current-buffer buf
-                          (insert-file-contents file)
-                          (setq buffer-file-name file)
-                          (when org-multi-wiki-rename-buffer
-                            (rename-buffer
-                             (funcall org-multi-wiki-buffer-name-fn
-                                      :namespace namespace :file file :dir dir)
-                             t))
-                          (set-buffer-modified-p nil)
-                          ;; Use delay-mode-hooks for faster loading.
-                          (delay-mode-hooks (set-auto-mode))
-                          (setq org-multi-wiki-mode-hooks-delayed t))
-                        buf)))
-                files)
+        (->> files
+             (-map (lambda (file)
+                     (or (find-buffer-visiting file)
+                         (let ((gpg-p (string-suffix-p ".gpg" file)))
+                           ;; If some files are GPG-encrypted and the
+                           ;; key is temporarily unavailble, the user
+                           ;; may want to read only unencrypted files.
+                           ;;
+                           ;; As a workaround, if there is an error
+                           ;; while reading a file ending with .gpg,
+                           ;; this function assumes that it is a
+                           ;; decryption issue and skips the following
+                           ;; decryption.
+                           (unless (and gpg-p
+                                        (or org-multi-wiki-gpg-skip-globally
+                                            (memq namespace org-multi-wiki-gpg-skip-namespace-list)
+                                            (member file org-multi-wiki-gpg-skip-file-list)))
+                             (condition-case nil
+                                 (let* ((default-directory (file-name-directory file))
+                                        (buf (create-file-buffer file)))
+                                   ;; Based on the implementation by @kungsgeten
+                                   ;; for faster loading of many Org files.
+                                   ;; https://github.com/alphapapa/org-ql/issues/88#issuecomment-570568341
+                                   (with-current-buffer buf
+                                     (insert-file-contents file)
+                                     (setq buffer-file-name file)
+                                     (when org-multi-wiki-rename-buffer
+                                       (rename-buffer
+                                        (funcall org-multi-wiki-buffer-name-fn
+                                                 :namespace namespace :file file :dir dir)
+                                        t))
+                                     (set-buffer-modified-p nil)
+                                     ;; Use delay-mode-hooks for faster loading.
+                                     (delay-mode-hooks (set-auto-mode))
+                                     (setq org-multi-wiki-mode-hooks-delayed t))
+                                   buf)
+                               (error (progn
+                                        (when gpg-p
+                                          (pcase (read-char-choice "Skip the following decryption on [f]ile, [n]amespace, [a]ll: " (string-to-list "fna"))
+                                            (?f (push file org-multi-wiki-gpg-skip-file-list))
+                                            (?n (push namespace org-multi-wiki-gpg-skip-namespace-list))
+                                            (?a (setq org-multi-wiki-gpg-skip-globally t))))
+                                        nil))))))))
+             ;; If there is a file which failed to decrypt, it is nil.
+             (delq nil))
       files)))
 
 (defun org-multi-wiki-run-mode-hooks ()

@@ -90,11 +90,28 @@ This should be the first element of one of the entries in
   :type 'symbol
   :group 'org-multi-wiki)
 
+(defvar org-multi-wiki-file-regexp)
+
+(defun org-multi-wiki--extensions-to-regexp (extensions)
+  "Produce a regular expression for a list of file EXTENSIONS."
+  (concat "\\`[^.].*\\(?:"
+          (mapconcat (lambda (ext)
+                       (concat "\\(?:"
+                               (regexp-quote ext)
+                               "\\)"))
+                     extensions
+                     "\\|")
+          "\\)\\'"))
+
 (defcustom org-multi-wiki-file-extensions '(".org" ".org.gpg")
   "List of file extensions for wiki entries.
 
 The first one is used to create a new file by default."
   :type '(repeat string)
+  :set (lambda (sym value)
+         (set sym value)
+         (setq org-multi-wiki-file-regexp
+               (org-multi-wiki--extensions-to-regexp value)))
   :group 'org-multi-wiki)
 
 (defcustom org-multi-wiki-escape-file-name-fn
@@ -324,7 +341,7 @@ instead of file names."
          (recursive (org-multi-wiki--plist-get :recursive namespace))
          (files (if recursive
                     (org-multi-wiki--org-files-recursively dir)
-                  (directory-files dir t org-agenda-file-regexp))))
+                  (directory-files dir t org-multi-wiki-file-regexp))))
     (if as-buffers
         (mapcar (lambda (file)
                   (or (find-buffer-visiting file)

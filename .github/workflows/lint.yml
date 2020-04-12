@@ -27,12 +27,13 @@ jobs:
     - uses: actions/checkout@v1
     - run: nix-channel --add https://github.com/purcell/nix-emacs-ci/archive/master.tar.gz emacs-ci
     - run: nix-channel --update
+    - name: Run checkdoc on all packages
+      run: nix-build --arg emacs "(import <emacs-ci>).${{ matrix.emacs-version }}" -A checkdoc --no-out-link --quiet .melpa-check
+    - name: Run package-lint on org-multi-wiki
+      run: nix-shell --arg emacs "(import <emacs-ci>).${{ matrix.emacs-version }}" -A package-lint.org-multi-wiki --pure --quiet .melpa-check
+    - name: Run package-lint on helm-org-multi-wiki
+      run: nix-shell --arg emacs "(import <emacs-ci>).${{ matrix.emacs-version }}" -A package-lint.helm-org-multi-wiki --pure --quiet .melpa-check
+    - name: Byte-compile all files
+      run: nix-build --arg emacs "(import <emacs-ci>).${{ matrix.emacs-version }}" -A byte-compile --no-out-link --quiet .melpa-check
     - name: Run tests
-      env:
-        PACKAGE: ${{ 'org-multi-wiki' }}
-      run: |
-        set -e
-        nix-build --arg emacs "(import <emacs-ci>).${{ matrix.emacs-version }}" -A $PACKAGE.byte-compile --no-out-link --quiet ci.nix
-        nix-build --arg emacs "(import <emacs-ci>).${{ matrix.emacs-version }}" -A $PACKAGE.checkdoc --no-out-link --quiet ci.nix
-        nix-shell --arg emacs "(import <emacs-ci>).${{ matrix.emacs-version }}" -A $PACKAGE.package-lint --pure --quiet ci.nix
-        nix-shell --arg emacs "(import <emacs-ci>).${{ matrix.emacs-version }}" -A $PACKAGE.buttercup --pure --quiet ci.nix
+      run: nix-shell --arg emacs "(import <emacs-ci>).${{ matrix.emacs-version }}" -A buttercup --pure --quiet .melpa-check

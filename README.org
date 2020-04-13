@@ -22,6 +22,8 @@ It uses alphapapa's [[https://github.com/alphapapa/org-ql][helm-org-ql]] for sea
   -  [[#file-name-escaping][File name escaping]]
   -  [[#linking-to-a-particular-heading-in-a-file][Linking to a particular heading in a file]]
   -  [[#entry-levels-and-entry-templates][Entry levels and entry templates]]
+  -  [[#buffer-names][Buffer names]]
+  -  [[#customizing-the-helm-source][Customizing the helm source]]
 -  [[#alternatives][Alternatives]]
 -  [[#license][License]]
 
@@ -49,6 +51,8 @@ Below is an example configuration through =use-package=:
 
 #+begin_src emacs-lisp
   (use-package org-multi-wiki
+    :config
+    (org-multi-wiki-global-mode 1)
     :custom
     (org-multi-wiki-namespace-list '((personal "~/org/personal/")
                                      (ops "~/org/ops/")
@@ -68,6 +72,8 @@ It is a list where each item is a list of the following items:
 - A directory containing Org files.
 
 You can append a plist to the list to set options on each namespace.
+
+You also have to turn on =org-multi-wiki-global-mode= for activating several function advices and the custom link type.
 
 For more options, see =org-multi-wiki= customization group.
 ** Usage

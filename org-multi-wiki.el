@@ -269,13 +269,34 @@ file name."
        (-map #'downcase it)
        (string-join it "-")))
 
-;;;; File and directory infrastructure
+;;;; Modes
+;;;###autoload
+(define-minor-mode org-multi-wiki-global-mode nil
+  nil nil nil
+  :global t
+  :after-hook
+  (cond
+   (org-multi-wiki-global-mode
+    (add-hook 'org-mode #'org-multi-wiki-check-buffer)
+    (advice-add 'org-link-escape
+                :filter-return #'org-multi-wiki-strip-namespace)
+    ;; Run mode hooks when `org-show-entry' is called.
+    ;; This is useful when an entry is visited by `helm-org-ql'.
+    (advice-add 'org-show-entry :before #'org-multi-wiki-run-mode-hooks)
+    (org-link-set-parameters "wiki" :follow #'org-multi-wiki-follow-link
+                             :store #'org-multi-wiki-store-link
+                             :complete #'org-multi-wiki-complete-link))
+   (t
+    (remove-hook 'org-mode #'org-multi-wiki-check-buffer)
+    (advice-remove 'org-link-escape #'org-multi-wiki-strip-namespace)
+    (advice-remove 'org-show-entry #'org-multi-wiki-run-mode-hooks)
+    (cl-delete (assoc "wiki" org-link-parameters) org-link-parameters))))
+
 (define-minor-mode org-multi-wiki-mode
-  "Minor mode for wiki entries."
+  "Minor mode that should be activated in all buffers."
   nil nil nil)
 
-(add-hook 'org-mode-hook 'org-multi-wiki-check-buffer)
-
+;;;; File and directory infrastructure
 (defun org-multi-wiki-check-buffer ()
   "Check if the current buffer is an wiki entry."
   (when (ignore-errors
@@ -400,10 +421,6 @@ instead of file names."
   (when org-multi-wiki-mode-hooks-delayed
     (run-mode-hooks)
     (setq org-multi-wiki-mode-hooks-delayed nil)))
-
-;; Run mode hooks when `org-show-entry' is called.
-;; This is effective when an entry is visited by `helm-org-ql'.
-(advice-add 'org-show-entry :before #'org-multi-wiki-run-mode-hooks)
 
 (cl-defun org-multi-wiki-buffer-name-1 (&key namespace file dir)
   "Return a buffer name suitable for Wiki.
@@ -563,8 +580,6 @@ e.g. when `org-capture' is run."
       (concat "wiki::" (match-string 2 link))
     link))
 
-(advice-add 'org-link-escape :filter-return #'org-multi-wiki-strip-namespace)
-
 (defun org-multi-wiki-complete-link ()
   "Support for the Org link completion mechanism."
   (let* ((origin-ns (plist-get (org-multi-wiki-entry-file-p) :namespace))
@@ -599,11 +614,6 @@ e.g. when `org-capture' is run."
                      (goto-char marker)
                      (org-multi-wiki--get-link-data origin-ns))))))
     (plist-get plist :link)))
-
-;;;###autoload (org-link-set-parameters "wiki" :follow #'org-multi-wiki-follow-link :store #'org-multi-wiki-store-link)
-(org-link-set-parameters "wiki" :follow #'org-multi-wiki-follow-link
-                         :store #'org-multi-wiki-store-link
-                         :complete #'org-multi-wiki-complete-link)
 
 ;;;; Commands
 

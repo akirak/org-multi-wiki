@@ -293,7 +293,7 @@ file name."
     (cl-delete (assoc "wiki" org-link-parameters) org-link-parameters))))
 
 (define-minor-mode org-multi-wiki-mode
-  "Minor mode that should be activated in all buffers."
+  "Minor mode that should be activated in all wiki buffers."
   nil nil nil)
 
 ;;;; File and directory infrastructure

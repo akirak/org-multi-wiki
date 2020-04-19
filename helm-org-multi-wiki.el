@@ -4,7 +4,7 @@
 
 ;; Author: Akira Komamura <akira.komamura@gmail.com>
 ;; Version: 0.3.2
-;; Package-Requires: ((emacs "25.1") (org-multi-wiki "0.3") (org-ql "0.4") (dash "2.12"))
+;; Package-Requires: ((emacs "25.1") (org-multi-wiki "0.3") (org-ql "0.4") (dash "2.12") (helm-org "1.0") (helm "3.5"))
 ;; Keywords: org, outlines
 ;; URL: https://github.com/akirak/org-multi-wiki
 
@@ -34,7 +34,14 @@
 (require 'dash)
 (require 'org-multi-wiki)
 (require 'org-ql)
+(require 'helm)
 (require 'helm-org-ql)
+
+;; Silence byte-compiler
+(defvar helm-map)
+(defvar helm-input-idle-delay)
+(defvar helm-org-ql-input-idle-delay)
+(defvar helm-org-ql-map)
 
 (defgroup helm-org-multi-wiki nil
   "Helm interface to org-multi-wiki."
@@ -42,7 +49,7 @@
   :group 'helm)
 
 (defvar helm-org-multi-wiki-dummy-source-map
-  (let ((map (copy-keymap helm-map)))
+  (let ((map (make-composed-keymap nil helm-map)))
     map)
   "Keymap for the dummy source.
 Based on `helm-map'.")
@@ -110,7 +117,7 @@ PROMPT and ACTION are passed to helm."
   (interactive)
   (let ((prompt (or prompt "org-multi-wiki namespaces: "))
         (action (or action
-                    (if (called-interactively-p)
+                    (if (called-interactively-p 'any)
                         helm-org-multi-wiki-namespace-actions
                       (lambda (candidate)
                         (or (helm-marked-candidates) candidate))))))
@@ -139,7 +146,7 @@ inherited."
 (defcustom helm-org-multi-wiki-query-parser #'org-ql--plain-query
   "Function used to parse the plain query.
 
-The function should take a plain query of org-ql as the argument
+The function should take a plain query of org-ql.el as the argument
 and return an S expression query."
   :type 'function)
 

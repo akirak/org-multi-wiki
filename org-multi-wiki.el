@@ -48,11 +48,9 @@
   "Multiple wikis based on org-mode."
   :group 'org)
 
-(defvar org-directory)
-
 ;;;;  Custom variables
 (defcustom org-multi-wiki-namespace-list
-  `((default ,org-directory))
+  nil
   "List of namespace configurations for wikis.
 
 Each entry in this variable should be a list containing the

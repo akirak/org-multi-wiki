@@ -37,6 +37,12 @@
 (require 'helm)
 (require 'helm-org-ql)
 
+;; Silence byte-compiler
+(defvar helm-map)
+(defvar helm-input-idle-delay)
+(defvar helm-org-ql-input-idle-delay)
+(defvar helm-org-ql-map)
+
 (defgroup helm-org-multi-wiki nil
   "Helm interface to org-multi-wiki."
   :group 'org-multi-wiki

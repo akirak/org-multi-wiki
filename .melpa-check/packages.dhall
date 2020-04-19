@@ -15,7 +15,8 @@ in  [ Package::{
       , pname = "helm-org-multi-wiki"
       , version = "0.3.2"
       , files = [ "helm-org-multi-wiki.el" ]
-      , dependencies = [ "helm", "org-multi-wiki", "org-ql", "dash" ]
+      , dependencies =
+        [ "helm", "org-multi-wiki", "org-ql", "dash", "helm-org" ]
       , localDependencies = [ "org-multi-wiki" ]
       , buttercupTests = [] : List Text
       , recipe =

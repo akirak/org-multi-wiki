@@ -139,7 +139,7 @@ inherited."
 (defcustom helm-org-multi-wiki-query-parser #'org-ql--plain-query
   "Function used to parse the plain query.
 
-The function should take a plain query of org-ql as the argument
+The function should take a plain query of org-ql.el as the argument
 and return an S expression query."
   :type 'function)
 

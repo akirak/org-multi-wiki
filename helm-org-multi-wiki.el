@@ -110,7 +110,7 @@ PROMPT and ACTION are passed to helm."
   (interactive)
   (let ((prompt (or prompt "org-multi-wiki namespaces: "))
         (action (or action
-                    (if (called-interactively-p)
+                    (if (called-interactively-p 'any)
                         helm-org-multi-wiki-namespace-actions
                       (lambda (candidate)
                         (or (helm-marked-candidates) candidate))))))

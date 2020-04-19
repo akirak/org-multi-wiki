@@ -34,6 +34,7 @@
 (require 'dash)
 (require 'org-multi-wiki)
 (require 'org-ql)
+(require 'helm)
 (require 'helm-org-ql)
 
 (defgroup helm-org-multi-wiki nil
@@ -42,7 +43,7 @@
   :group 'helm)
 
 (defvar helm-org-multi-wiki-dummy-source-map
-  (let ((map (copy-keymap helm-map)))
+  (let ((map (make-composed-keymap nil helm-map)))
     map)
   "Keymap for the dummy source.
 Based on `helm-map'.")

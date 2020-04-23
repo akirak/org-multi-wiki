@@ -16,17 +16,12 @@ jobs:
           - emacs-26-2
           - emacs-26-3
     steps:
-    - name: install nix
-      uses: cachix/install-nix-action@v5
-    - name: install cachix
-      run: nix-env -iA cachix -f https://cachix.org/api/v1/install
-    - name: enable cachix for emacs-ci
-      run: cachix use emacs-ci
-    - name: check if nix is installed
-      run: nix-env --version
-    - uses: actions/checkout@v1
-    - run: nix-channel --add https://github.com/purcell/nix-emacs-ci/archive/master.tar.gz emacs-ci
-    - run: nix-channel --update
+    - uses: actions/checkout@v2
+    - uses: cachix/install-nix-action@v7
+    # cachix-action requires a name, so I won't use it
+    # - uses: cachix/cachix-action@v6
+    - run: nix-env -iA cli.gh-action -f https://github.com/akirak/melpa-check/archive/v3.tar.gz
+    - run: melpa-check deps
     - name: Run checkdoc on all packages
       run: nix-shell -A checkdoc --pure --quiet .melpa-check
     - name: Run package-lint on org-multi-wiki

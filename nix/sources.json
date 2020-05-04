@@ -1,0 +1,50 @@
+{
+    "melpa-check": {
+        "branch": "v3",
+        "description": "Check your Emacs package before publishing it to MELPA",
+        "homepage": "",
+        "owner": "akirak",
+        "repo": "melpa-check",
+        "rev": "f7480f9a3ce9ab0f980be6e30e43ef3c404f51b5",
+        "sha256": "0ymfrpd26xnpjhnbjybl19dixx3sfag8n39qla39scc716vcmfgb",
+        "type": "tarball",
+        "url": "https://github.com/akirak/melpa-check/archive/f7480f9a3ce9ab0f980be6e30e43ef3c404f51b5.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "niv": {
+        "branch": "master",
+        "description": "Easy dependency management for Nix projects",
+        "homepage": "https://github.com/nmattia/niv",
+        "owner": "nmattia",
+        "repo": "niv",
+        "rev": "f73bf8d584148677b01859677a63191c31911eae",
+        "sha256": "0jlmrx633jvqrqlyhlzpvdrnim128gc81q5psz2lpp2af8p8q9qs",
+        "type": "tarball",
+        "url": "https://github.com/nmattia/niv/archive/f73bf8d584148677b01859677a63191c31911eae.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "nix-emacs-ci": {
+        "branch": "master",
+        "description": "Emacs installations for continuous integration",
+        "homepage": null,
+        "owner": "purcell",
+        "repo": "nix-emacs-ci",
+        "rev": "ec1995913f281e974d55fcf66bf78fa2dba36731",
+        "sha256": "0a4yafx6zxwbdy0p7r3m8v9vnrn2n8y2v2wzibjmk6cm1k9n5rhm",
+        "type": "tarball",
+        "url": "https://github.com/purcell/nix-emacs-ci/archive/ec1995913f281e974d55fcf66bf78fa2dba36731.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "nixpkgs": {
+        "branch": "nixos-19.09",
+        "description": "A read-only mirror of NixOS/nixpkgs tracking the released channels. Send issues and PRs to",
+        "homepage": "https://github.com/NixOS/nixpkgs",
+        "owner": "NixOS",
+        "repo": "nixpkgs-channels",
+        "rev": "a7ceb2536ab11973c59750c4c48994e3064a75fa",
+        "sha256": "0hka65f31njqpq7i07l22z5rs7lkdfcl4pbqlmlsvnysb74ynyg1",
+        "type": "tarball",
+        "url": "https://github.com/NixOS/nixpkgs-channels/archive/a7ceb2536ab11973c59750c4c48994e3064a75fa.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    }
+}

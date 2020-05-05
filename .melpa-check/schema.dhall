@@ -27,6 +27,7 @@ in  { Package =
           { pname : PackageName
           , version : Version
           , files : List File
+          , emacsVersion : Version
           , localDependencies : List PackageName
           , dependencies : List PackageName
           , buttercupTests : List Pattern

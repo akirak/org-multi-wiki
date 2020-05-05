@@ -3,6 +3,7 @@ let Package = (./schema.dhall).Package
 in  [ Package::{
       , pname = "org-multi-wiki"
       , version = "0.3.1"
+      , emacsVersion = "26.1"
       , files = [ "org-multi-wiki.el" ]
       , dependencies = [ "dash", "s", "org-ql" ]
       , recipe =
@@ -14,6 +15,7 @@ in  [ Package::{
     , Package::{
       , pname = "helm-org-multi-wiki"
       , version = "0.3.2"
+      , emacsVersion = "26.1"
       , files = [ "helm-org-multi-wiki.el" ]
       , dependencies =
         [ "helm", "org-multi-wiki", "org-ql", "dash", "helm-org" ]

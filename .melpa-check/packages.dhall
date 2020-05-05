@@ -2,7 +2,7 @@ let Package = (./schema.dhall).Package
 
 in  [ Package::{
       , pname = "org-multi-wiki"
-      , version = "0.3.1"
+      , version = "0.4"
       , emacsVersion = "26.1"
       , files = [ "org-multi-wiki.el" ]
       , dependencies = [ "dash", "s", "org-ql" ]

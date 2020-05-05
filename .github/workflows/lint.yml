@@ -16,7 +16,7 @@ jobs:
           - helm-org-multi-wiki
     steps:
     - uses: actions/checkout@v2
-    - uses: akirak/emacs-package
+    - uses: akirak/emacs-package@master
     - run: melpa-check lint ${{ matrix.package }}
   build-and-test:
     runs-on: ubuntu-latest
@@ -31,6 +31,6 @@ jobs:
           - emacs-26-3
     steps:
     - uses: actions/checkout@v2
-    - uses: akirak/emacs-package
+    - uses: akirak/emacs-package@master
     - run: melpa-check byte-compile -e ${{ matrix.emacs }} ${{ matrix.package }}
     - run: melpa-check buttercup -e ${{ matrix.emacs }} ${{ matrix.package }}

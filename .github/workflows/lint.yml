@@ -15,6 +15,7 @@ jobs:
           - org-multi-wiki
           - helm-org-multi-wiki
     steps:
+    - uses: cachix/install-nix-action@v8
     - uses: actions/checkout@v2
     - uses: akirak/emacs-package@master
     - run: melpa-check lint ${{ matrix.package }}
@@ -30,6 +31,7 @@ jobs:
           - emacs-26-2
           - emacs-26-3
     steps:
+    - uses: cachix/install-nix-action@v8
     - uses: actions/checkout@v2
     - uses: akirak/emacs-package@master
     - run: melpa-check byte-compile -e ${{ matrix.emacs }} ${{ matrix.package }}

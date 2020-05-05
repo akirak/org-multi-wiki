@@ -7,35 +7,32 @@ on:
     - '**/*.org'
 
 jobs:
-  build:
+  lint:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        emacs-version:
-          - emacs-26-1
-          - emacs-26-2
-          - emacs-26-3
+        package:
+          - org-multi-wiki
+          - helm-org-multi-wiki
     steps:
-    - name: install nix
-      uses: cachix/install-nix-action@v5
-    - name: install cachix
-      run: nix-env -iA cachix -f https://cachix.org/api/v1/install
-    - name: enable cachix for emacs-ci
-      run: cachix use emacs-ci
-    - name: check if nix is installed
-      run: nix-env --version
-    - uses: actions/checkout@v1
-    - run: nix-channel --add https://github.com/purcell/nix-emacs-ci/archive/master.tar.gz emacs-ci
-    - run: nix-channel --update
-    - name: Run checkdoc on all packages
-      run: nix-shell -A checkdoc --pure --quiet .melpa-check
-    - name: Run package-lint on org-multi-wiki
-      run: nix-shell -A package-lint.org-multi-wiki --pure --quiet .melpa-check
-    - name: Run package-lint on helm-org-multi-wiki
-      run: nix-shell -A package-lint.helm-org-multi-wiki --pure --quiet .melpa-check
-    - name: Byte-compile all files
-      run: nix-build --arg emacs "(import <emacs-ci>).${{ matrix.emacs-version }}" -A byte-compile --no-out-link --quiet .melpa-check
-    - name: Run tests
-      run: |
-        nix-build --arg emacs "(import <emacs-ci>).${{ matrix.emacs-version }}" -A prepareButtercup --no-build-output .melpa-check
-        nix-shell --arg emacs "(import <emacs-ci>).${{ matrix.emacs-version }}" -A buttercup.org-multi-wiki --pure --quiet .melpa-check
+    - uses: cachix/install-nix-action@v8
+    - uses: actions/checkout@v2
+    - uses: akirak/emacs-package@master
+    - run: melpa-check lint ${{ matrix.package }}
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package:
+          - org-multi-wiki
+          - helm-org-multi-wiki
+        emacs:
+          - 26.1
+          - 26.2
+          - 26.3
+    steps:
+    - uses: cachix/install-nix-action@v8
+    - uses: actions/checkout@v2
+    - uses: akirak/emacs-package@master
+    - run: melpa-check byte-compile -e ${{ matrix.emacs }} ${{ matrix.package }}
+    - run: melpa-check buttercup -e ${{ matrix.emacs }} ${{ matrix.package }}

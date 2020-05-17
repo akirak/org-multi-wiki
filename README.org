@@ -3,7 +3,15 @@
 This is a package for working with multiple Org-based knowledge base sites inside a single Emacs session.
 It uses alphapapa's [[https://github.com/alphapapa/org-ql][helm-org-ql]] for searching, which makes navigation and entry creation seamless.
 
-[[https://github.com/akirak/org-multi-wiki/workflows/lint/badge.svg?branch=master][https://github.com/akirak/org-multi-wiki/workflows/lint/badge.svg?branch=master]]
+#+BEGIN_HTML
+<a href="https://github.com/akirak/org-multi-wiki/actions?query=workflow%3A%22org-multi-wiki+CI%22">
+<img alt="Build Status" src="https://github.com/akirak/org-multi-wiki/workflows/org-multi-wiki%20CI/badge.svg" />
+</a>
+
+<a href="https://github.com/akirak/org-multi-wiki/actions?query=workflow%3A%22helm-org-multi-wiki+CI%22">
+<img alt="Build Status" src="https://github.com/akirak/org-multi-wiki/workflows/helm-org-multi-wiki%20CI/badge.svg" />
+</a>
+#+END_HTML
 ** Table of contents
 :PROPERTIES:
 :TOC: siblings

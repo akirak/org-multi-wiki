@@ -1,0 +1,27 @@
+jobs:
+  lint:
+    runs-on:
+      - ubuntu-latest
+    steps:
+      - uses: cachix/install-nix-action@v8
+      - uses: actions/checkout@v1
+      - uses: akirak/emacs-package@master
+      - name: 'Lint (with Emacs version: latest)'
+        run: melpa-check lint -e latest org-multi-wiki
+  tests:
+    runs-on:
+      - ubuntu-latest
+    steps:
+      - uses: cachix/install-nix-action@v8
+      - uses: actions/checkout@v1
+      - uses: akirak/emacs-package@master
+      - name: 'Byte-compile (with Emacs version: all)'
+        run: melpa-check byte-compile -e all org-multi-wiki
+      - name: 'Test using buttercup (with Emacs version: all)'
+        run: melpa-check buttercup -e all org-multi-wiki
+name: org-multi-wiki CI
+'on':
+  push:
+    paths-ignore:
+      - '**/*.md'
+      - '**/*.org'

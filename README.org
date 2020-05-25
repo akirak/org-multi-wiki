@@ -7,10 +7,14 @@ It uses alphapapa's [[https://github.com/alphapapa/org-ql][helm-org-ql]] for sea
 <a href="https://github.com/akirak/org-multi-wiki/actions?query=workflow%3A%22org-multi-wiki+CI%22">
 <img alt="Build Status" src="https://github.com/akirak/org-multi-wiki/workflows/org-multi-wiki%20CI/badge.svg" />
 </a>
+<a href="https://melpa.org/#/org-multi-wiki"><img alt="MELPA" src="https://melpa.org/packages/org-multi-wiki-badge.svg"/></a>
+
+<br>
 
 <a href="https://github.com/akirak/org-multi-wiki/actions?query=workflow%3A%22helm-org-multi-wiki+CI%22">
 <img alt="Build Status" src="https://github.com/akirak/org-multi-wiki/workflows/helm-org-multi-wiki%20CI/badge.svg" />
 </a>
+<a href="https://melpa.org/#/helm-org-multi-wiki"><img alt="MELPA" src="https://melpa.org/packages/helm-org-multi-wiki-badge.svg"/></a>
 #+END_HTML
 ** Table of contents
 :PROPERTIES:
@@ -50,10 +54,7 @@ It uses alphapapa's [[https://github.com/alphapapa/org-ql][helm-org-ql]] for sea
 - =org-ql=
 - [[https://github.com/alphapapa/org-ql][helm-org-ql]], if you use helm-org-multi-wiki (recommended)
 ** Installation
-This package is not available on MELPA yet.
-
-Install the dependencies and clone this repository to your local machine.
-You can use =straight.el= or Quelpa.
+This package is available on MELPA as =org-multi-wiki= and =helm-org-multi-wiki=.
 ** Configuration
 Below is an example configuration through =use-package=:
 

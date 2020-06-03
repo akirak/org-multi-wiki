@@ -77,7 +77,7 @@ custom variables for the global setting:
   :group 'org-multi-wiki)
 
 (define-obsolete-variable-alias 'org-multi-wiki-directories
-  'org-muorg-multi-wiki-namespace-list "0.3")
+  'org-multi-wiki-namespace-list "0.3")
 
 (defcustom org-multi-wiki-staging-directories
   nil

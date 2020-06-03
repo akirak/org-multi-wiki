@@ -79,14 +79,24 @@ custom variables for the global setting:
 (define-obsolete-variable-alias 'org-multi-wiki-directories
   'org-muorg-multi-wiki-namespace-list "0.3")
 
-(defcustom org-multi-wiki-default-namespace
-  (caar org-multi-wiki-namespace-list)
-  "Default namespace of wikis.
+(defcustom org-multi-wiki-staging-directories
+  nil
+  "List of directories in which you will keep drafts.
 
-This should be the first element of one of the entries in
-`org-multi-wiki-namespace-list'."
-  :type 'symbol
-  :group 'org-multi-wiki)
+The first item in the list is the actual directory in which this
+package creates files.
+
+Other directories serve as a stash."
+  :type '(repeat directory))
+
+(defcustom org-multi-wiki-save-staging-directories
+  t
+  "Whether to save the list of staging directories.
+
+When this variable is non-nil, save the value of
+`org-multi-wiki-staging-directories' every time it is updated by
+commands such as `org-multi-wiki-switch-staging-directory'."
+  :type 'boolean)
 
 (defvar org-multi-wiki-file-regexp)
 
@@ -669,6 +679,52 @@ e.g. when `org-capture' is run."
       (with-current-buffer buf
         (org-multi-wiki-run-mode-hooks))
       (funcall org-multi-wiki-display-buffer-fn buf))))
+
+;;;###autoload
+(cl-defun org-multi-wiki-switch-staging-directory (dir &key save)
+  "Switch the staging directory to another one in the list."
+  (interactive (list (completing-read "Switch the staging directory: "
+                                      (-map #'abbreviate-file-name
+                                            org-multi-wiki-staging-directories))
+                     :save (if current-prefix-arg
+                               (not org-multi-wiki-save-staging-directories)
+                             org-multi-wiki-save-staging-directories)))
+  (setq org-multi-wiki-staging-directories
+        (cons dir
+              (cl-remove dir org-multi-wiki-staging-directories
+                         :test #'file-equal-p)))
+  (when save
+    (customize-save-variable 'org-multi-wiki-staging-directories
+                             org-multi-wiki-staging-directories)))
+
+;;;###autoload
+(defun org-multi-wiki-add-staging-directory (dir)
+  "Add a new directory to the list of staging directories."
+  (interactive "DAdd staging directory: ")
+  (unless (file-directory-p dir)
+    (if (yes-or-no-p (format-message "%s is not a directory. Create it?" dir))
+        (make-directory dir)
+      (user-error "Not a directory")))
+  (org-multi-wiki-switch-staging-directory dir))
+
+(defun org-multi-wiki-remove-staging-directory (dir)
+  "Remove DIR from `org-multi-wiki-staging-directories'.
+
+When a prefix argument is given, it removes the current staging
+directory. It works like a pop operation."
+  (interactive (list (if current-prefix-arg
+                         (car-safe org-multi-wiki-staging-directories)
+                       (completing-read "Remove staging directory: "
+                                        (-map #'abbreviate-file-name
+                                              org-multi-wiki-staging-directories)
+                                        nil t))))
+  (unless (stringp dir)
+    (user-error "Directory must not be nil"))
+  (setq org-multi-wiki-staging-directories
+        (cl-remove dir org-multi-wiki-staging-directories
+                   :test #'file-equal-p))
+  (when org-multi-wiki-save-staging-directories
+    (org-multi-wiki--save-staging-directory)))
 
 (provide 'org-multi-wiki)
 ;;; org-multi-wiki.el ends here

@@ -469,6 +469,11 @@ Either NAMESPACE or DIR to the wiki should be specified."
     (->> (file-relative-name file dir)
          (string-remove-suffix extension))))
 
+(defun org-multi-wiki--save-staging-directory ()
+  "Save `org-multi-wiki-staging-directories' to `custom-file'."
+  (customize-save-variable 'org-multi-wiki-staging-directories
+                           org-multi-wiki-staging-directories))
+
 ;;;; Custom link type
 ;;;###autoload
 (defun org-multi-wiki-follow-link (link)
@@ -694,8 +699,7 @@ e.g. when `org-capture' is run."
               (cl-remove dir org-multi-wiki-staging-directories
                          :test #'file-equal-p)))
   (when save
-    (customize-save-variable 'org-multi-wiki-staging-directories
-                             org-multi-wiki-staging-directories)))
+    (org-multi-wiki--save-staging-directory)))
 
 ;;;###autoload
 (defun org-multi-wiki-add-staging-directory (dir)

@@ -42,7 +42,7 @@
 (require 'org)
 (require 'ol)
 
-(declare-function 'org-ql-select "ext:org-ql")
+(declare-function org-ql-select "ext:org-ql-select")
 
 (defgroup org-multi-wiki nil
   "Multiple wikis based on org-mode."

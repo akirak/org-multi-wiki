@@ -4,17 +4,13 @@ This is a package for working with multiple Org-based knowledge base sites insid
 It uses alphapapa's [[https://github.com/alphapapa/org-ql][helm-org-ql]] for searching, which makes navigation and entry creation seamless.
 
 #+BEGIN_HTML
-<a href="https://github.com/akirak/org-multi-wiki/actions?query=workflow%3A%22org-multi-wiki+CI%22">
-<img alt="Build Status" src="https://github.com/akirak/org-multi-wiki/workflows/org-multi-wiki%20CI/badge.svg" />
+<a href="https://github.com/akirak/org-multi-wiki/actions?query=workflow%3A%22CI%22">
+<img alt="Build Status" src="https://github.com/akirak/org-multi-wiki/workflows/CI/badge.svg" />
 </a>
-<a href="https://melpa.org/#/org-multi-wiki"><img alt="MELPA" src="https://melpa.org/packages/org-multi-wiki-badge.svg"/></a>
 
-<br>
+<a href="https://melpa.org/#/org-multi-wiki"><img alt="org-multi-wiki on MELPA" src="https://melpa.org/packages/org-multi-wiki-badge.svg"/></a>
 
-<a href="https://github.com/akirak/org-multi-wiki/actions?query=workflow%3A%22helm-org-multi-wiki+CI%22">
-<img alt="Build Status" src="https://github.com/akirak/org-multi-wiki/workflows/helm-org-multi-wiki%20CI/badge.svg" />
-</a>
-<a href="https://melpa.org/#/helm-org-multi-wiki"><img alt="MELPA" src="https://melpa.org/packages/helm-org-multi-wiki-badge.svg"/></a>
+<a href="https://melpa.org/#/helm-org-multi-wiki"><img alt="helm-org-multi-wiki on MELPA" src="https://melpa.org/packages/helm-org-multi-wiki-badge.svg"/></a>
 #+END_HTML
 ** Table of contents
 :PROPERTIES:

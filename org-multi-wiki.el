@@ -671,7 +671,7 @@ specify a FILENAME."
                   (unless (and dir (file-directory-p dir))
                     (user-error "Wiki directory is nil or missing: %s" dir))
                   (if filename
-                      (f-join dir filename)
+                      (expand-file-name filename dir)
                     (org-multi-wiki--find-heading heading dir))))
          (new (not (file-exists-p fpath)))
          (existing-buffer (find-buffer-visiting fpath))
@@ -722,9 +722,9 @@ the source file."
          (directory (org-multi-wiki-directory namespace))
          (fpath (f-join directory filename)))
     ;; Run some verification here
-    (unless (and directory (f-directory-p directory))
+    (unless (and directory (file-directory-p directory))
       (user-error "Directory is nil or non-existent: %s" directory))
-    (when (f-exists-p fpath)
+    (when (file-exists-p fpath)
       (error "File already exists: %s" fpath))
     (when (find-buffer-visiting fpath)
       (error "Buffer visiting the file already exists: %s" fpath))

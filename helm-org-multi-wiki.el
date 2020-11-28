@@ -51,8 +51,7 @@
 (defvar helm-org-multi-wiki-dummy-source-map
   (let ((map (make-composed-keymap nil helm-map)))
     map)
-  "Keymap for the dummy source.
-Based on `helm-map'.")
+  "Keymap for the dummy source.")
 
 (defcustom helm-org-multi-wiki-show-files t
   "Whether to prepend file list in `helm-org-multi-wiki'."

@@ -459,6 +459,26 @@ Either NAMESPACE or DIR to the wiki should be specified."
     (->> (file-relative-name file dir)
          (string-remove-suffix extension))))
 
+(defun org-multi-wiki--find-heading (heading dir)
+  "Find a file of HEADING in DIR."
+  (let* ((escaped-filenames (org-multi-wiki-expand-org-file-names
+                             dir (funcall org-multi-wiki-escape-file-name-fn heading)))
+         (filenames (append (org-multi-wiki-expand-org-file-names
+                             dir heading)
+                            escaped-filenames)))
+    (or (cl-find-if #'file-exists-p filenames)
+        (car escaped-filenames))))
+
+(cl-defun org-multi-wiki--setup-new-buffer (buf namespace fpath dir)
+  "Set up a buffer for a new wiki entry.
+
+See `org-multi-wiki-visit-entry' for BUF, NAMESPACE, FPATH, and DIR."
+  (when org-multi-wiki-rename-buffer
+    (with-current-buffer buf
+      (rename-buffer (funcall org-multi-wiki-buffer-name-fn
+                              :namespace namespace :file fpath :dir dir)
+                     t))))
+
 ;;;; Custom link type
 ;;;###autoload
 (defun org-multi-wiki-follow-link (link)
@@ -625,8 +645,16 @@ e.g. when `org-capture' is run."
              org-multi-wiki-current-namespace)))
 
 ;;;###autoload
-(cl-defun org-multi-wiki-visit-entry (heading &key namespace)
-  "Visit an Org file for HEADING in the directory in NAMESPACE."
+(cl-defun org-multi-wiki-visit-entry (heading &key
+                                              namespace
+                                              filename)
+  "Visit an entry of the heading.
+
+HEADING in the top-level heading of an Org file to create or look
+for. It looks for an existing entry in NAMESPACE or create a new
+one if none. A file is determined based on
+`org-multi-wiki-escape-file-name-fn', unless you explicitly
+specify a FILENAME."
   (interactive (let ((namespace (or (and current-prefix-arg
                                          (org-multi-wiki-select-namespace))
                                     org-multi-wiki-current-namespace
@@ -639,36 +667,79 @@ e.g. when `org-capture' is run."
                                                       file :namespace namespace)))))
                        :namespace namespace)))
   (let* ((dir (org-multi-wiki-directory namespace))
-         (escaped-filenames (org-multi-wiki-expand-org-file-names
-                             dir (funcall org-multi-wiki-escape-file-name-fn heading)))
-         (filenames (append (org-multi-wiki-expand-org-file-names
-                             dir heading)
-                            escaped-filenames))
-         (fpath (cl-find-if #'file-exists-p filenames)))
-    (unless (and dir (file-directory-p dir))
-      (user-error "Wiki directory is nil or missing: %s" dir))
-    (let* ((new (null fpath))
-           (fpath (or fpath (car escaped-filenames)))
-           (existing-buffer (find-buffer-visiting fpath))
-           ;; Set default-directory to allow directory-specific templates
-           (default-directory dir)
-           (buf (or existing-buffer
-                    (and new
-                         (with-current-buffer (create-file-buffer fpath)
-                           (setq buffer-file-name fpath)
-                           (insert (funcall org-multi-wiki-entry-template-fn heading))
-                           (set-auto-mode)
-                           (current-buffer)))
-                    (find-file-noselect fpath))))
-      (when (and (not existing-buffer)
-                 org-multi-wiki-rename-buffer)
-        (with-current-buffer buf
-          (rename-buffer (funcall org-multi-wiki-buffer-name-fn
-                                  :namespace namespace :file fpath :dir dir)
-                         t)))
-      (with-current-buffer buf
-        (org-multi-wiki-run-mode-hooks))
-      (funcall org-multi-wiki-display-buffer-fn buf))))
+         (fpath (progn
+                  (unless (and dir (file-directory-p dir))
+                    (user-error "Wiki directory is nil or missing: %s" dir))
+                  (if filename
+                      (expand-file-name filename dir)
+                    (org-multi-wiki--find-heading heading dir))))
+         (new (not (file-exists-p fpath)))
+         (existing-buffer (find-buffer-visiting fpath))
+         ;; Set default-directory to allow directory-specific templates
+         (default-directory dir)
+         (buf (or existing-buffer
+                  (and new
+                       (with-current-buffer (create-file-buffer fpath)
+                         (setq buffer-file-name fpath)
+                         (insert (funcall org-multi-wiki-entry-template-fn heading))
+                         (set-auto-mode)
+                         (current-buffer)))
+                  (find-file-noselect fpath))))
+    (unless existing-buffer
+      (org-multi-wiki--setup-new-buffer buf namespace fpath dir))
+    (with-current-buffer buf
+      (org-multi-wiki-run-mode-hooks))
+    (funcall org-multi-wiki-display-buffer-fn buf)))
+
+;;;###autoload
+(defun org-multi-wiki-create-entry-from-subtree (namespace)
+  "Create a new entry from the current subtree.
+
+This command creates a new entry in the selected NAMESPACE, from
+an Org subtree outside of any wiki.
+
+After successful operation, the original subtree is deleted from
+the source file."
+  (interactive (list (org-multi-wiki-select-namespace "Namespace: ")))
+  (unless (derived-mode-p 'org-mode)
+    (user-error "Must be run inside org-mode"))
+  (when (org-multi-wiki-entry-file-p)
+    (user-error "You cannot move an wiki entry/subtree using this command"))
+  (let* ((heading (org-get-heading t t t t))
+         ;; Let the user determine the file name.
+         ;;
+         ;; The user can edit the heading after the entry creation, so
+         ;; only the file name matters at this point.
+         (filename (read-string "Filename: "
+                                (concat (funcall org-multi-wiki-escape-file-name-fn
+                                                 heading)
+                                        ".org")))
+         ;; Append a suffix to the file name if it does not end with
+         ;; .org or .gpg
+         (filename (if (or (string-match-p (rx (or ".org" ".gpg") eol) filename))
+                       filename
+                     (concat filename ".org")))
+         (directory (org-multi-wiki-directory namespace))
+         (fpath (f-join directory filename)))
+    ;; Run some verification here
+    (unless (and directory (file-directory-p directory))
+      (user-error "Directory is nil or non-existent: %s" directory))
+    (when (file-exists-p fpath)
+      (error "File already exists: %s" fpath))
+    (when (find-buffer-visiting fpath)
+      (error "Buffer visiting the file already exists: %s" fpath))
+    (let ((buf (find-file-noselect fpath)))
+      (condition-case err
+          (progn
+            ;; TODO: Apply the template to the new file but don't create an entry in it
+            (org-multi-wiki--setup-new-buffer buf namespace fpath directory)
+            (org-refile nil nil (list heading fpath nil nil))
+            (funcall org-multi-wiki-display-buffer-fn buf))
+        (error
+         ;; Clean up the created buffer if it has zero length
+         (when (zerop (buffer-size buf))
+           (kill-buffer buf))
+         (error err))))))
 
 (provide 'org-multi-wiki)
 ;;; org-multi-wiki.el ends here

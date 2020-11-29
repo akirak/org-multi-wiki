@@ -720,7 +720,7 @@ the source file."
                        filename
                      (concat filename ".org")))
          (directory (org-multi-wiki-directory namespace))
-         (fpath (f-join directory filename)))
+         (fpath (expand-file-name filename directory)))
     ;; Run some verification here
     (unless (and directory (file-directory-p directory))
       (user-error "Directory is nil or non-existent: %s" directory))

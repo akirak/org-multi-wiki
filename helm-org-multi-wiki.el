@@ -4,7 +4,7 @@
 
 ;; Author: Akira Komamura <akira.komamura@gmail.com>
 ;; Version: 0.3.2
-;; Package-Requires: ((emacs "26.1") (org-multi-wiki "0.3") (org-ql "0.4") (dash "2.12") (helm-org "1.0") (helm "3.5"))
+;; Package-Requires: ((emacs "26.1") (org-multi-wiki "0.4") (org-ql "0.5") (dash "2.12") (helm-org-ql "0.5") (helm "3.5"))
 ;; Keywords: org, outlines
 ;; URL: https://github.com/akirak/org-multi-wiki
 
@@ -142,7 +142,9 @@ inherited."
   "Query sent when no input is in the minibuffer."
   :type 'sexp)
 
-(defcustom helm-org-multi-wiki-query-parser #'org-ql--plain-query
+(defcustom helm-org-multi-wiki-query-parser
+  ;; This is an internal API of org-ql, so it would be better to avoid it
+  #'org-ql--query-string-to-sexp
   "Function used to parse the plain query.
 
 The function should take a plain query of org-ql.el as the argument

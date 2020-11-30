@@ -142,7 +142,9 @@ inherited."
   "Query sent when no input is in the minibuffer."
   :type 'sexp)
 
-(defcustom helm-org-multi-wiki-query-parser #'org-ql--plain-query
+(defcustom helm-org-multi-wiki-query-parser
+  ;; This is an internal API of org-ql, so it would be better to avoid it
+  #'org-ql--query-string-to-sexp
   "Function used to parse the plain query.
 
 The function should take a plain query of org-ql.el as the argument

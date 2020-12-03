@@ -71,6 +71,10 @@
   "Persistent action in `helm-org-multi-wiki-namespace'."
   :type 'function)
 
+(defcustom helm-org-multi-wiki-skip-subtrees t
+  "Whether to skip subtrees matching the query for cleaner output."
+  :type 'boolean)
+
 (defun helm-org-multi-wiki-create-entry-from-input (namespace)
   "Create an entry in NAMESPACE from the input in the dummy source."
   (let ((inp (helm-get-selection)))
@@ -164,7 +168,10 @@ and return an S expression query."
                                (ignore-errors
                                  ;; Ignore errors that might be caused by partially typed queries.
                                  (org-ql-select helm-org-multi-wiki-buffers query
-                                   :action `(helm-org-ql--heading ,window-width)))))))
+                                   :action `(prog1
+                                                (helm-org-ql--heading ,window-width)
+                                              (when helm-org-multi-wiki-skip-subtrees
+                                                (org-end-of-subtree)))))))))
    (match :initform #'identity)
    (fuzzy-match :initform nil)
    (multimatch :initform nil)

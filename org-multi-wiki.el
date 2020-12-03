@@ -633,6 +633,27 @@ e.g. when `org-capture' is run."
                      (org-multi-wiki--get-link-data origin-ns))))))
     (plist-get plist :link)))
 
+;;;; Other utility functions
+
+(defun org-multi-wiki--trim-statistic-cookie (text)
+  "Eliminate statistic cookie from a heading TEXT."
+  (save-match-data
+    (if (string-match (rx (+ space)
+                          "[" (or (and (* (any digit)) "%")
+                                  (and (+ (any digit)) "/"
+                                       (+ (any digit))))
+                          "]"
+                          (* space) eol)
+                      text)
+        (substring text 0 (car (match-data)))
+      text)))
+
+(defun org-multi-wiki--cleanup-heading (text)
+  "Clean up an Org heading TEXT to make it neutral."
+  (->> text
+       (org-multi-wiki--trim-statistic-cookie)
+       (org-link-display-format)))
+
 ;;;; Commands
 
 ;;;###autoload
@@ -705,7 +726,8 @@ the source file."
     (user-error "Must be run inside org-mode"))
   (when (org-multi-wiki-entry-file-p)
     (user-error "You cannot move an wiki entry/subtree using this command"))
-  (let* ((heading (org-get-heading t t t t))
+  (let* ((heading (org-multi-wiki--cleanup-heading
+                   (org-get-heading t t t t)))
          ;; Let the user determine the file name.
          ;;
          ;; The user can edit the heading after the entry creation, so

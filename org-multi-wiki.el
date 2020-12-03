@@ -650,7 +650,7 @@ e.g. when `org-capture' is run."
                                               filename)
   "Visit an entry of the heading.
 
-HEADING in the top-level heading of an Org file to create or look
+HEADING in the root heading of an Org file to create or look
 for. It looks for an existing entry in NAMESPACE or create a new
 one if none. A file is determined based on
 `org-multi-wiki-escape-file-name-fn', unless you explicitly

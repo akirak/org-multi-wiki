@@ -55,3 +55,16 @@
       (it "generates a top-level entry"
         (let ((result (template "Hello")))
           (expect result :to-equal "* Hello\n"))))))
+
+(describe "org-multi-wiki--strip-org-extension"
+  (it "strips .org"
+    (expect (org-multi-wiki--strip-org-extension "sample.org")
+            :to-equal "sample"))
+  (it "strips .org.gpg"
+    (expect (org-multi-wiki--strip-org-extension "sample.org.gpg")
+            :to-equal "sample"))
+  (it "retains the original"
+    (expect (org-multi-wiki--strip-org-extension "sample.txt")
+            :to-equal "sample.txt")
+    (expect (org-multi-wiki--strip-org-extension "hello.org.nonorg")
+            :to-equal "hello.org.nonorg")))

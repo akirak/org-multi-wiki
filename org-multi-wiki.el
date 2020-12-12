@@ -509,13 +509,14 @@ See `org-multi-wiki-visit-entry' for BUF, NAMESPACE, FPATH, and DIR."
                                   (funcall org-multi-wiki-escape-file-name-fn basename))))))
       (cond
        (file (find-file file))
-       (t (let ((marker (car-safe (org-ql-select (org-multi-wiki-entry-files id)
-                                    `(and (level 1)
-                                          (heading ,headline))
-                                    :action '(point-marker)))))
+       (t (let ((marker (and headline
+                             (car-safe (org-ql-select (org-multi-wiki-entry-files id)
+                                         `(and (level 1)
+                                               (heading ,headline))
+                                         :action '(point-marker))))))
             (if marker
                 (org-goto-marker-or-bmk marker)
-              (error "FIXME: Create a new file")))))
+              (org-multi-wiki-visit-entry basename :namespace id)))))
       (let ((pos (or (and custom-id
                           (or (car-safe (org-ql-select (current-buffer)
                                           `(property "CUSTOM_ID" ,custom-id)
@@ -540,6 +541,35 @@ See `org-multi-wiki-visit-entry' for BUF, NAMESPACE, FPATH, and DIR."
                           :link (plist-get plist :link)
                           :description (plist-get plist :headline))
     link-brackets))
+
+(cl-defun org-multi-wiki--make-link (ns basename
+                                        &key
+                                        origin-ns
+                                        custom-id
+                                        level
+                                        headline
+                                        to-file)
+  "Create a Org link URI.
+
+For NS, BASENAME, ORIGIN-NS, CUSTOM-ID, LEVEL, and HEADLINE
+See `org-multi-wiki--get-link-data'
+
+When TO-FILE, it generates a link to the file itself."
+  (format "wiki:%s:%s%s"
+          (if (not (and origin-ns
+                        org-multi-wiki-allow-omit-namespace
+                        (eq origin-ns ns)))
+              (symbol-name ns)
+            "")
+          basename
+          (or (and to-file
+                   "")
+              (and (not (org-multi-wiki--top-level-link-fragments ns))
+                   (= level 1)
+                   "")
+              (and custom-id
+                   (concat "::#" custom-id))
+              (concat "::*" headline))))
 
 (defun org-multi-wiki--get-link-data (&optional origin-ns
                                                 stored-noninteractively)
@@ -567,22 +597,14 @@ e.g. when `org-capture' is run."
                                                      nil nil default)))
                                     (when custom-id
                                       (org-set-property "CUSTOM_ID" custom-id)
-                                      custom-id)))))
-              (ns (plist-get plist :namespace))
-              (link (format "wiki:%s:%s%s"
-                            (if (not (and origin-ns
-                                          org-multi-wiki-allow-omit-namespace
-                                          (eq origin-ns ns)))
-                                (symbol-name ns)
-                              "")
-                            (plist-get plist :basename)
-                            (or (and (not (org-multi-wiki--top-level-link-fragments (plist-get plist :namespace)))
-                                     (= level 1)
-                                     "")
-                                (and custom-id
-                                     (concat "::#" custom-id))
-                                (concat "::*" headline)))))
-        (list :link link :headline headline)))))
+                                      custom-id))))))
+        (list :link (org-multi-wiki--make-link (plist-get plist :namespace)
+                                               (plist-get plist :basename)
+                                               :origin-ns origin-ns
+                                               :custom-id custom-id
+                                               :headline headline
+                                               :level level)
+              :headline headline)))))
 
 (defun org-multi-wiki-strip-namespace (link)
   "Strip namespace from LINK if possible."
@@ -598,6 +620,13 @@ e.g. when `org-capture' is run."
       (concat "wiki::" (match-string 2 link))
     link))
 
+(defun org-multi-wiki--strip-org-extension (filename)
+  "Strip .org or .org.gpg from FILENAME."
+  (save-match-data
+    (if (string-match (rx (or ".org" ".org.gpg") eos) filename)
+        (substring filename 0 (car (match-data)))
+      filename)))
+
 (defun org-multi-wiki-complete-link ()
   "Support for the Org link completion mechanism."
   (let* ((origin-ns (plist-get (org-multi-wiki-entry-file-p) :namespace))
@@ -612,26 +641,35 @@ e.g. when `org-capture' is run."
                                  file :namespace namespace)
                                 file))
                         files))
-         (file (cdr (assoc (completing-read "File: "
-                                            (mapcar #'car alist))
-                           alist)))
-         headings
-         (plist (with-current-buffer
-                    (or (find-buffer-visiting file)
-                        (find-file-noselect file))
-                  (org-with-wide-buffer
-                   (goto-char (point-min))
-                   (while (re-search-forward (rx bol (+ "*") space) nil t)
-                     (push (propertize (string-trim-right (thing-at-point 'line t))
-                                       'marker (point-marker))
-                           headings))
-                   (let* ((heading (completing-read "Heading: "
-                                                    (nreverse headings)
-                                                    nil t))
-                          (marker (get-char-property 0 'marker heading)))
-                     (goto-char marker)
-                     (org-multi-wiki--get-link-data origin-ns))))))
-    (plist-get plist :link)))
+         (inp (completing-read "File or heading: "
+                               (mapcar #'car alist)))
+         (file (cdr-safe (assoc inp alist))))
+    (if file
+        (plist-get (with-current-buffer
+                       (or (find-buffer-visiting file)
+                           (find-file-noselect file))
+                     (org-with-wide-buffer
+                      (let* ((heading (completing-read "Heading: "
+                                                       (org-multi-wiki--toplevel-headings-markers)
+                                                       nil t))
+                             (marker (get-char-property 0 'marker heading)))
+                        (goto-char marker)
+                        (org-multi-wiki--get-link-data origin-ns))))
+                   :link)
+      (org-multi-wiki--make-link namespace
+                                 (org-multi-wiki--strip-org-extension inp)
+                                 :origin-ns origin-ns
+                                 :to-file t))))
+
+(defun org-multi-wiki--toplevel-headings-markers ()
+  "Return the top level headings with their markers."
+  (let (headings)
+    (goto-char (point-min))
+    (while (re-search-forward (rx bol (+ "*") space) nil t)
+      (push (propertize (string-trim-right (thing-at-point 'line t))
+                        'marker (point-marker))
+            headings))
+    (nreverse headings)))
 
 ;;;; Other utility functions
 

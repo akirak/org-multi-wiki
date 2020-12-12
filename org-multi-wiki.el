@@ -315,6 +315,7 @@ file name."
                            (mapcar #'car org-multi-wiki-namespace-list)
                            nil t nil nil org-multi-wiki-current-namespace)))
 
+;;;###autoload
 (defun org-multi-wiki-entry-file-p (&optional file)
   "Check if FILE is a wiki entry.
 
@@ -341,6 +342,7 @@ If FILE is omitted, the current buffer is assumed."
                :namespace namespace
                :basename (file-relative-name sans-extension root-directory)))))
 
+;;;###autoload
 (defun org-multi-wiki-in-namespace-p (namespace &optional dir)
   "Check if a file/directory is in a particular namespace.
 

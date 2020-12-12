@@ -642,7 +642,11 @@ e.g. when `org-capture' is run."
                                 file))
                         files))
          (inp (completing-read "File or heading: "
-                               (mapcar #'car alist)))
+                               (mapcar #'car alist)
+                               nil nil
+                               (when (region-active-p)
+                                 (buffer-substring-no-properties
+                                  (region-beginning) (region-end)))))
          (file (cdr-safe (assoc inp alist))))
     (if file
         (plist-get (with-current-buffer

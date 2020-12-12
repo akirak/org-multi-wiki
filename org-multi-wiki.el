@@ -315,6 +315,7 @@ file name."
                            (mapcar #'car org-multi-wiki-namespace-list)
                            nil t nil nil org-multi-wiki-current-namespace)))
 
+;;;###autoload
 (defun org-multi-wiki-entry-file-p (&optional file)
   "Check if FILE is a wiki entry.
 
@@ -340,6 +341,26 @@ If FILE is omitted, the current buffer is assumed."
          (list :file file
                :namespace namespace
                :basename (file-relative-name sans-extension root-directory)))))
+
+;;;###autoload
+(defun org-multi-wiki-in-namespace-p (namespace &optional dir)
+  "Check if a file/directory is in a particular namespace.
+
+This checks if the directory is in/on a wiki NAMESPACE, which is
+a symbol. If the directory is in/on the namespace, this function
+returns non-nil.
+
+By default, the directory is `default-directory', but you can
+explicitly give it as DIR."
+  (let* ((data (or (assoc namespace org-multi-wiki-namespace-list)
+                   (error "Namespace %s is undefined" namespace)))
+         (root (nth 1 data))
+         (recursive (plist-get (-drop 2 data) :recursive))
+         (dir (or (and dir (file-name-as-directory dir))
+                  default-directory)))
+    (if recursive
+        (string-prefix-p (file-truename root) (file-truename dir))
+      (file-equal-p dir root))))
 
 (defun org-multi-wiki--current-namespace ()
   "Return the namespace of the current buffer."

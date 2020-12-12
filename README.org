@@ -20,6 +20,8 @@ It uses alphapapa's [[https://github.com/alphapapa/org-ql][helm-org-ql]] for sea
 -  [[#prerequisites][Prerequisites]]
 -  [[#installation][Installation]]
 -  [[#configuration][Configuration]]
+  -  [[#namespace-predicate-for-org-ql][Namespace predicate for org-ql]]
+  -  [[#integration-with-org-recent-headings][Integration with org-recent-headings]]
 -  [[#usage][Usage]]
   -  [[#the-current-namespace][The current namespace]]
   -  [[#helm-org-multi-wiki][helm-org-multi-wiki]]
@@ -82,7 +84,10 @@ You can append a plist to the list to set options on each namespace.
 You also have to turn on =org-multi-wiki-global-mode= for activating several function advices and the custom link type.
 
 For more options, see =org-multi-wiki= customization group.
-
+*** Namespace predicate for org-ql
+:PROPERTIES:
+:CREATED_TIME: [2020-12-12 Sat 23:36]
+:END:
 You can also define a predicate for =org-ql= to test if an entry is inside a particular namespace:
 
 #+begin_src emacs-lisp
@@ -92,6 +97,22 @@ You can also define a predicate for =org-ql= to test if an entry is inside a par
 #+end_src
 
 You can use the predicate in =helm-org-multi-wiki= to display entries in a particular namespace, e.g. =wiki:namespace keyword=.
+*** Integration with org-recent-headings
+:PROPERTIES:
+:CREATED_TIME: [2020-12-12 Sat 23:37]
+:END:
+[[https://github.com/alphapapa/org-recent-headings/][org-recent-headings]] is a package which lets you quickly jump to a recently visited heading.
+To track headings visited by =org-multi-wiki=, you may want to add the following configuration:
+
+#+begin_src emacs-lisp
+  (with-eval-after-load 'org-recent-headings
+    (add-hook 'org-recent-headings-advise-functions
+              #'org-multi-wiki-follow-link)
+    (add-hook 'org-recent-headings-advise-functions
+              #'helm-org-ql-show-marker)
+    (add-hook 'org-recent-headings-advise-functions
+              #'helm-org-ql-show-marker-indirect))
+#+end_src
 ** Usage
 *** The current namespace
 Most commands in this package work with a single namespace: the current namespace.

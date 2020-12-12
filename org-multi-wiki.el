@@ -509,13 +509,14 @@ See `org-multi-wiki-visit-entry' for BUF, NAMESPACE, FPATH, and DIR."
                                   (funcall org-multi-wiki-escape-file-name-fn basename))))))
       (cond
        (file (find-file file))
-       (t (let ((marker (car-safe (org-ql-select (org-multi-wiki-entry-files id)
-                                    `(and (level 1)
-                                          (heading ,headline))
-                                    :action '(point-marker)))))
+       (t (let ((marker (and headline
+                             (car-safe (org-ql-select (org-multi-wiki-entry-files id)
+                                         `(and (level 1)
+                                               (heading ,headline))
+                                         :action '(point-marker))))))
             (if marker
                 (org-goto-marker-or-bmk marker)
-              (error "FIXME: Create a new file")))))
+              (org-multi-wiki-visit-entry basename :namespace id)))))
       (let ((pos (or (and custom-id
                           (or (car-safe (org-ql-select (current-buffer)
                                           `(property "CUSTOM_ID" ,custom-id)

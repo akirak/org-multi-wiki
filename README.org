@@ -82,6 +82,16 @@ You can append a plist to the list to set options on each namespace.
 You also have to turn on =org-multi-wiki-global-mode= for activating several function advices and the custom link type.
 
 For more options, see =org-multi-wiki= customization group.
+
+You can also define a predicate for =org-ql= to test if an entry is inside a particular namespace:
+
+#+begin_src emacs-lisp
+  (org-ql-defpred wiki (namespace)
+    "It is inside a particular namespace."
+    :body (org-multi-wiki-in-namespace-p (intern namespace)))
+#+end_src
+
+You can use the predicate in =helm-org-multi-wiki= to display entries in a particular namespace, e.g. =wiki:namespace keyword=.
 ** Usage
 *** The current namespace
 Most commands in this package work with a single namespace: the current namespace.

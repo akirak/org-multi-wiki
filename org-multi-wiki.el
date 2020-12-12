@@ -662,7 +662,7 @@ e.g. when `org-capture' is run."
                                  :to-file t))))
 
 (defun org-multi-wiki--toplevel-headings-markers ()
-  "Return the top-level headings with their markers."
+  "Return the top level headings with their markers."
   (let (headings)
     (goto-char (point-min))
     (while (re-search-forward (rx bol (+ "*") space) nil t)

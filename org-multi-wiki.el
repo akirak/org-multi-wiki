@@ -541,6 +541,35 @@ See `org-multi-wiki-visit-entry' for BUF, NAMESPACE, FPATH, and DIR."
                           :description (plist-get plist :headline))
     link-brackets))
 
+(cl-defun org-multi-wiki--make-link (ns basename
+                                        &key
+                                        origin-ns
+                                        custom-id
+                                        level
+                                        headline
+                                        to-file)
+  "Create a Org link URI.
+
+For NS, BASENAME, ORIGIN-NS, CUSTOM-ID, LEVEL, and HEADLINE
+See `org-multi-wiki--get-link-data'
+
+When TO-FILE, it generates a link to the file itself."
+  (format "wiki:%s:%s%s"
+          (if (not (and origin-ns
+                        org-multi-wiki-allow-omit-namespace
+                        (eq origin-ns ns)))
+              (symbol-name ns)
+            "")
+          basename
+          (or (and to-file
+                   "")
+              (and (not (org-multi-wiki--top-level-link-fragments ns))
+                   (= level 1)
+                   "")
+              (and custom-id
+                   (concat "::#" custom-id))
+              (concat "::*" headline))))
+
 (defun org-multi-wiki--get-link-data (&optional origin-ns
                                                 stored-noninteractively)
   "Return data needed for generating a link.
@@ -567,22 +596,14 @@ e.g. when `org-capture' is run."
                                                      nil nil default)))
                                     (when custom-id
                                       (org-set-property "CUSTOM_ID" custom-id)
-                                      custom-id)))))
-              (ns (plist-get plist :namespace))
-              (link (format "wiki:%s:%s%s"
-                            (if (not (and origin-ns
-                                          org-multi-wiki-allow-omit-namespace
-                                          (eq origin-ns ns)))
-                                (symbol-name ns)
-                              "")
-                            (plist-get plist :basename)
-                            (or (and (not (org-multi-wiki--top-level-link-fragments (plist-get plist :namespace)))
-                                     (= level 1)
-                                     "")
-                                (and custom-id
-                                     (concat "::#" custom-id))
-                                (concat "::*" headline)))))
-        (list :link link :headline headline)))))
+                                      custom-id))))))
+        (list :link (org-multi-wiki--make-link (plist-get plist :namespace)
+                                               (plist-get plist :basename)
+                                               :origin-ns origin-ns
+                                               :custom-id custom-id
+                                               :headline headline
+                                               :level level)
+              :headline headline)))))
 
 (defun org-multi-wiki-strip-namespace (link)
   "Strip namespace from LINK if possible."

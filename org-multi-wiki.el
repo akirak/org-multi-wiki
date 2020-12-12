@@ -619,6 +619,13 @@ e.g. when `org-capture' is run."
       (concat "wiki::" (match-string 2 link))
     link))
 
+(defun org-multi-wiki--strip-org-extension (filename)
+  "Strip .org or .org.gpg from FILENAME."
+  (save-match-data
+    (if (string-match (rx (or ".org" ".org.gpg") eos) filename)
+        (substring filename 0 (car (match-data)))
+      filename)))
+
 (defun org-multi-wiki-complete-link ()
   "Support for the Org link completion mechanism."
   (let* ((origin-ns (plist-get (org-multi-wiki-entry-file-p) :namespace))
@@ -633,26 +640,35 @@ e.g. when `org-capture' is run."
                                  file :namespace namespace)
                                 file))
                         files))
-         (file (cdr (assoc (completing-read "File: "
-                                            (mapcar #'car alist))
-                           alist)))
-         headings
-         (plist (with-current-buffer
-                    (or (find-buffer-visiting file)
-                        (find-file-noselect file))
-                  (org-with-wide-buffer
-                   (goto-char (point-min))
-                   (while (re-search-forward (rx bol (+ "*") space) nil t)
-                     (push (propertize (string-trim-right (thing-at-point 'line t))
-                                       'marker (point-marker))
-                           headings))
-                   (let* ((heading (completing-read "Heading: "
-                                                    (nreverse headings)
-                                                    nil t))
-                          (marker (get-char-property 0 'marker heading)))
-                     (goto-char marker)
-                     (org-multi-wiki--get-link-data origin-ns))))))
-    (plist-get plist :link)))
+         (inp (completing-read "File or heading: "
+                               (mapcar #'car alist)))
+         (file (cdr-safe (assoc inp alist))))
+    (if file
+        (plist-get (with-current-buffer
+                       (or (find-buffer-visiting file)
+                           (find-file-noselect file))
+                     (org-with-wide-buffer
+                      (let* ((heading (completing-read "Heading: "
+                                                       (org-multi-wiki--toplevel-headings-markers)
+                                                       nil t))
+                             (marker (get-char-property 0 'marker heading)))
+                        (goto-char marker)
+                        (org-multi-wiki--get-link-data origin-ns))))
+                   :link)
+      (org-multi-wiki--make-link namespace
+                                 (org-multi-wiki--strip-org-extension inp)
+                                 :origin-ns origin-ns
+                                 :to-file t))))
+
+(defun org-multi-wiki--toplevel-headings-markers ()
+  "Return the top-level headings with their markers."
+  (let (headings)
+    (goto-char (point-min))
+    (while (re-search-forward (rx bol (+ "*") space) nil t)
+      (push (propertize (string-trim-right (thing-at-point 'line t))
+                        'marker (point-marker))
+            headings))
+    (nreverse headings)))
 
 ;;;; Other utility functions
 

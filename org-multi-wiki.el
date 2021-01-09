@@ -198,6 +198,18 @@ See `org-multi-wiki-buffer-name-1' for an example."
   :type 'function
   :group 'org-multi-wiki)
 
+(defcustom org-multi-wiki-removal-block-functions
+  '(org-multi-wiki-entry-file-p)
+  "Block removal of a subtree if any of these functions returns non-nil.
+
+This is curently effective in
+`org-multi-wiki-create-entry-from-subtree'.
+
+These functions take no argument and should return non-nil if the
+user must not muve the subtree at point to another file."
+  :type '(repeat function)
+  :group 'org-multi-wiki)
+
 ;;;; Other variables
 (defvar org-multi-wiki-current-namespace org-multi-wiki-default-namespace)
 
@@ -787,8 +799,8 @@ the source file."
   (interactive (list (org-multi-wiki-select-namespace "Namespace: ")))
   (unless (derived-mode-p 'org-mode)
     (user-error "Must be run inside org-mode"))
-  (when (org-multi-wiki-entry-file-p)
-    (user-error "You cannot move an wiki entry/subtree using this command"))
+  (when (-any #'funcall org-multi-wiki-removal-block-functions)
+    (user-error "You cannot move this wiki entry/subtree"))
   (let* ((heading (org-multi-wiki--cleanup-heading
                    (org-get-heading t t t t)))
          ;; Let the user determine the file name.

@@ -198,6 +198,18 @@ See `org-multi-wiki-buffer-name-1' for an example."
   :type 'function
   :group 'org-multi-wiki)
 
+(defcustom org-multi-wiki-removal-block-functions
+  '(org-multi-wiki-entry-file-p)
+  "Block removal of a subtree if any of these functions returns non-nil.
+
+This is curently effective in
+`org-multi-wiki-create-entry-from-subtree'.
+
+These functions take no argument and should return non-nil if the
+user must not muve the subtree at point to another file."
+  :type '(repeat function)
+  :group 'org-multi-wiki)
+
 ;;;; Other variables
 (defvar org-multi-wiki-current-namespace org-multi-wiki-default-namespace)
 
@@ -391,49 +403,60 @@ instead of file names."
         (->> files
              (-map (lambda (file)
                      (or (find-buffer-visiting file)
-                         (let ((gpg-p (string-suffix-p ".gpg" file)))
-                           ;; If some files are GPG-encrypted and the
-                           ;; key is temporarily unavailble, the user
-                           ;; may want to read only unencrypted files.
-                           ;;
-                           ;; As a workaround, if there is an error
-                           ;; while reading a file ending with .gpg,
-                           ;; this function assumes that it is a
-                           ;; decryption issue and skips the following
-                           ;; decryption.
-                           (unless (and gpg-p
-                                        (or org-multi-wiki-gpg-skip-globally
-                                            (memq namespace org-multi-wiki-gpg-skip-namespace-list)
-                                            (member file org-multi-wiki-gpg-skip-file-list)))
-                             (condition-case nil
-                                 (let* ((default-directory (file-name-directory file))
-                                        (buf (create-file-buffer file)))
-                                   ;; Based on the implementation by @kungsgeten
-                                   ;; for faster loading of many Org files.
-                                   ;; https://github.com/alphapapa/org-ql/issues/88#issuecomment-570568341
-                                   (with-current-buffer buf
-                                     (insert-file-contents file)
-                                     (setq buffer-file-name file)
-                                     (when org-multi-wiki-rename-buffer
-                                       (rename-buffer
-                                        (funcall org-multi-wiki-buffer-name-fn
-                                                 :namespace namespace :file file :dir dir)
-                                        t))
-                                     (set-buffer-modified-p nil)
-                                     ;; Use delay-mode-hooks for faster loading.
-                                     (delay-mode-hooks (set-auto-mode))
-                                     (setq org-multi-wiki-mode-hooks-delayed t))
-                                   buf)
-                               (error (progn
-                                        (when gpg-p
-                                          (pcase (read-char-choice "Skip the following decryption on [f]ile, [n]amespace, [a]ll: " (string-to-list "fna"))
-                                            (?f (push file org-multi-wiki-gpg-skip-file-list))
-                                            (?n (push namespace org-multi-wiki-gpg-skip-namespace-list))
-                                            (?a (setq org-multi-wiki-gpg-skip-globally t))))
-                                        nil))))))))
+                         (org-multi-wiki--find-file-noselect :namespace namespace
+                                                             :file file
+                                                             :dir dir))))
              ;; If there is a file which failed to decrypt, it is nil.
              (delq nil))
       files)))
+
+(cl-defun org-multi-wiki--find-file-noselect (&key file namespace dir)
+  "Create a new buffer for an Org file.
+
+FILE is an absolute file to the Org file, and NAMESPACE and DIR
+contain the file."
+  (let ((gpg-p (string-suffix-p ".gpg" file)))
+    ;; If some files are GPG-encrypted and the
+    ;; key is temporarily unavailble, the user
+    ;; may want to read only unencrypted files.
+    ;;
+    ;; As a workaround, if there is an error
+    ;; while reading a file ending with .gpg,
+    ;; this function assumes that it is a
+    ;; decryption issue and skips the following
+    ;; decryption.
+    (unless (and gpg-p
+                 (or org-multi-wiki-gpg-skip-globally
+                     (memq namespace org-multi-wiki-gpg-skip-namespace-list)
+                     (member file org-multi-wiki-gpg-skip-file-list)))
+      (condition-case nil
+          (let* ((default-directory (file-name-directory file))
+                 (buf (create-file-buffer file)))
+            ;; Based on the implementation by @kungsgeten
+            ;; for faster loading of many Org files.
+            ;; https://github.com/alphapapa/org-ql/issues/88#issuecomment-570568341
+            (with-current-buffer buf
+              (insert-file-contents file)
+              (setq buffer-file-name file)
+              (when org-multi-wiki-rename-buffer
+                (rename-buffer
+                 (funcall org-multi-wiki-buffer-name-fn
+                          :namespace namespace :file file :dir dir)
+                 t))
+              (set-buffer-modified-p nil)
+              ;; Use delay-mode-hooks for faster loading.
+              (delay-mode-hooks (set-auto-mode))
+              (setq org-multi-wiki-mode-hooks-delayed t))
+            buf)
+        (error (progn
+                 (when gpg-p
+                   (pcase (read-char-choice
+                           "Skip the following decryption on [f]ile, [n]amespace, [a]ll: "
+                           (string-to-list "fna"))
+                     (?f (push file org-multi-wiki-gpg-skip-file-list))
+                     (?n (push namespace org-multi-wiki-gpg-skip-namespace-list))
+                     (?a (setq org-multi-wiki-gpg-skip-globally t))))
+                 nil))))))
 
 (defun org-multi-wiki-run-mode-hooks ()
   "Run mode hooks delayed by org-multi-wiki."
@@ -775,6 +798,10 @@ specify a FILENAME."
       (org-multi-wiki-run-mode-hooks))
     (funcall org-multi-wiki-display-buffer-fn buf)))
 
+(defsubst org-multi-wiki--removal-blocked-p ()
+  "Return non-nil if the user must not remove the subtree at point."
+  (-any #'funcall org-multi-wiki-removal-block-functions))
+
 ;;;###autoload
 (defun org-multi-wiki-create-entry-from-subtree (namespace)
   "Create a new entry from the current subtree.
@@ -784,11 +811,13 @@ an Org subtree outside of any wiki.
 
 After successful operation, the original subtree is deleted from
 the source file."
-  (interactive (list (org-multi-wiki-select-namespace "Namespace: ")))
+  (interactive (list (if (org-multi-wiki--removal-blocked-p)
+                         (user-error "You cannot move this wiki entry/subtree")
+                       (org-multi-wiki-select-namespace "Namespace: "))))
   (unless (derived-mode-p 'org-mode)
     (user-error "Must be run inside org-mode"))
-  (when (org-multi-wiki-entry-file-p)
-    (user-error "You cannot move an wiki entry/subtree using this command"))
+  (when (org-multi-wiki--removal-blocked-p)
+    (user-error "You cannot move this wiki entry/subtree"))
   (let* ((heading (org-multi-wiki--cleanup-heading
                    (org-get-heading t t t t)))
          ;; Let the user determine the file name.
@@ -796,8 +825,9 @@ the source file."
          ;; The user can edit the heading after the entry creation, so
          ;; only the file name matters at this point.
          (filename (read-string "Filename: "
-                                (concat (funcall org-multi-wiki-escape-file-name-fn
-                                                 heading)
+                                (concat (substring-no-properties
+                                         (funcall org-multi-wiki-escape-file-name-fn
+                                                  heading))
                                         ".org")))
          ;; Append a suffix to the file name if it does not end with
          ;; .org or .gpg

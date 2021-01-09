@@ -787,6 +787,10 @@ specify a FILENAME."
       (org-multi-wiki-run-mode-hooks))
     (funcall org-multi-wiki-display-buffer-fn buf)))
 
+(defsubst org-multi-wiki--removal-blocked-p ()
+  "Return non-nil if the user must not remove the subtree at point."
+  (-any #'funcall org-multi-wiki-removal-block-functions))
+
 ;;;###autoload
 (defun org-multi-wiki-create-entry-from-subtree (namespace)
   "Create a new entry from the current subtree.
@@ -796,10 +800,12 @@ an Org subtree outside of any wiki.
 
 After successful operation, the original subtree is deleted from
 the source file."
-  (interactive (list (org-multi-wiki-select-namespace "Namespace: ")))
+  (interactive (list (if (org-multi-wiki--removal-blocked-p)
+                         (user-error "You cannot move this wiki entry/subtree")
+                       (org-multi-wiki-select-namespace "Namespace: "))))
   (unless (derived-mode-p 'org-mode)
     (user-error "Must be run inside org-mode"))
-  (when (-any #'funcall org-multi-wiki-removal-block-functions)
+  (when (org-multi-wiki--removal-blocked-p)
     (user-error "You cannot move this wiki entry/subtree"))
   (let* ((heading (org-multi-wiki--cleanup-heading
                    (org-get-heading t t t t)))

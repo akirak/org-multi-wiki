@@ -808,8 +808,9 @@ the source file."
          ;; The user can edit the heading after the entry creation, so
          ;; only the file name matters at this point.
          (filename (read-string "Filename: "
-                                (concat (funcall org-multi-wiki-escape-file-name-fn
-                                                 heading)
+                                (concat (substring-no-properties
+                                         (funcall org-multi-wiki-escape-file-name-fn
+                                                  heading))
                                         ".org")))
          ;; Append a suffix to the file name if it does not end with
          ;; .org or .gpg

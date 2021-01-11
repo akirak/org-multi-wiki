@@ -199,6 +199,10 @@ and return an S expression query."
                                   (goto-char (point-min))
                                   (when (re-search-forward org-heading-regexp nil t)
                                     (org-show-entry))))
+   (coerce :initform (lambda (buf)
+                       (with-current-buffer buf
+                         (org-multi-wiki-run-mode-hooks))
+                       buf))
    (action :initform 'helm-org-multi-wiki-file-actions)))
 
 (cl-defun helm-org-multi-wiki-make-dummy-source (namespaces &key first)

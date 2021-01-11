@@ -785,12 +785,15 @@ specify a FILENAME."
          ;; Set default-directory to allow directory-specific templates
          (default-directory dir)
          (buf (or existing-buffer
-                  (and new
-                       (with-current-buffer (create-file-buffer fpath)
-                         (setq buffer-file-name fpath)
-                         (insert (funcall org-multi-wiki-entry-template-fn heading))
-                         (set-auto-mode)
-                         (current-buffer)))
+                  (when new
+                    (let ((parent (file-name-directory fpath)))
+                      (unless (file-directory-p parent)
+                        (make-directory parent t)))
+                    (with-current-buffer (create-file-buffer fpath)
+                      (setq buffer-file-name fpath)
+                      (insert (funcall org-multi-wiki-entry-template-fn heading))
+                      (set-auto-mode)
+                      (current-buffer)))
                   (find-file-noselect fpath))))
     (unless existing-buffer
       (org-multi-wiki--setup-new-buffer buf namespace fpath dir))

@@ -142,6 +142,13 @@ This can be nil.  In that case, `helm-org-ql-actions' will be
 inherited."
   :type 'alist)
 
+(defcustom helm-org-multi-wiki-file-actions
+  '(("Switch to the buffer" . switch-to-buffer)
+    ("Switch to the buffer (other window)" . switch-to-buffer-other-window)
+    ("Switch to the buffer (other frame)" . switch-to-buffer-other-frame))
+  "Helm actions for Org file buffers."
+  :type 'alist)
+
 (defcustom helm-org-multi-wiki-default-query '(level 1)
   "Query sent when no input is in the minibuffer."
   :type 'sexp)
@@ -186,13 +193,19 @@ and return an S expression query."
                            (-map (lambda (buf)
                                    (cons (buffer-name buf) buf))
                                  helm-org-multi-wiki-buffers)))
+   ;; This does not restore the narrowing state, nor does it allow customization.
+   ;; Maybe work on this later?
    (persistent-action :initform (lambda (buf)
                                   (switch-to-buffer buf)
                                   (widen)
                                   (goto-char (point-min))
                                   (when (re-search-forward org-heading-regexp nil t)
                                     (org-show-entry))))
-   (action :initform #'switch-to-buffer)))
+   (coerce :initform (lambda (buf)
+                       (with-current-buffer buf
+                         (org-multi-wiki-run-mode-hooks))
+                       buf))
+   (action :initform 'helm-org-multi-wiki-file-actions)))
 
 (cl-defun helm-org-multi-wiki-make-dummy-source (namespaces &key first)
   "Create a dummy helm source.

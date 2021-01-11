@@ -193,6 +193,8 @@ and return an S expression query."
                            (-map (lambda (buf)
                                    (cons (buffer-name buf) buf))
                                  helm-org-multi-wiki-buffers)))
+   ;; This does not restore the narrowing state, nor does it allow customization.
+   ;; Maybe work on this later?
    (persistent-action :initform (lambda (buf)
                                   (switch-to-buffer buf)
                                   (widen)

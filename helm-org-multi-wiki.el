@@ -101,7 +101,9 @@ for an example, which is the default value."
 
 ;;;###autoload
 (defmacro helm-org-multi-wiki-def-create-entry-action (namespace)
-  "Define a command to creating an entry in NAMESPACE via the dummy source."
+  "Define a command to create an entry in NAMESPACE via the dummy source.
+
+This function is only provided as a utility."
   `(defun ,(intern (format "helm-org-multi-wiki-create/%s" namespace)) ()
      (interactive)
      (helm-org-multi-wiki-create-entry-from-input (quote ,namespace))))
@@ -227,7 +229,10 @@ and return an S expression query."
 (cl-defun helm-org-multi-wiki-make-dummy-source (namespaces &key first)
   "Create a dummy helm source.
 
-NAMESPACES and FIRST are the same as in `helm-org-multi-wiki'."
+NAMESPACES is a list of symbols.
+
+FIRST is the target namespace of the first action, as in
+`helm-org-multi-wiki' function."
   (helm-build-dummy-source "New entry"
     :keymap helm-org-multi-wiki-dummy-source-map
     :action
@@ -249,7 +254,8 @@ NAMESPACES and FIRST are the same as in `helm-org-multi-wiki'."
 NAMESPACES are are a list of namespaces.
 It can be a list of symbols or a symbol.
 
-When FIRST is given, it is the default target of entry creation."
+If FIRST is given, it will be the default namespace in which an
+entry is created."
   (interactive)
   ;; Based on the implementation of helm-org-ql.
   (pcase current-prefix-arg

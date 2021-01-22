@@ -49,6 +49,23 @@
         (let ((result (escape-fn "hello/john connor")))
           (expect result :to-equal "hello/JohnConnor")))))
 
+  (describe "org-multi-wiki-default-custom-id-escape-fn"
+    (cl-flet ((escape-fn (heading) (org-multi-wiki-default-custom-id-escape-fn heading)))
+
+      (it "Converts to lower case"
+        (let ((result (escape-fn "This is an apple")))
+          (expect result :to-equal "this-is-an-apple")))
+
+      (it "Splits words by spaces, hyphens, and underscores"
+        (let ((result (escape-fn "org-multi-wiki is an Emacs Lisp package")))
+          (expect result :to-equal "org-multi-wiki-is-an-emacs-lisp-package"))
+        (let ((result (escape-fn "Elixir uses under_scores in symbols")))
+          (expect result :to-equal "elixir-uses-under-scores-in-symbols")))
+
+      (it "Eliminates other symbols"
+        (let ((result (escape-fn "I was surprised to see it coming!")))
+          (expect result :to-equal "i-was-surprised-to-see-it-coming")))))
+
   (describe "org-multi-wiki-default-entry-template-fn"
     (cl-flet ((template (heading) (org-multi-wiki-default-entry-template-fn heading)))
 

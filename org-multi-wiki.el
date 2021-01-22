@@ -352,7 +352,8 @@ If FILE is omitted, the current buffer is assumed."
                org-multi-wiki-namespace-list)
          (list :file file
                :namespace namespace
-               :basename (file-relative-name sans-extension root-directory)))))
+               :basename (file-relative-name (file-truename sans-extension)
+                                             (file-truename root-directory))))))
 
 ;;;###autoload
 (defun org-multi-wiki-in-namespace-p (namespace &optional dir)

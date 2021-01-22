@@ -272,7 +272,7 @@ file name."
 
 (defun org-multi-wiki-default-custom-id-escape-fn (heading)
   "Escape HEADING for a CUSTOM_ID property."
-  (--> (split-string heading (rx (any space)))
+  (--> (split-string heading (rx (any "-_" space)))
        (-map (lambda (str)
                (s-replace-regexp (rx (not (any alnum))) "" str))
              it)

@@ -75,11 +75,28 @@
   "Whether to skip subtrees matching the query for cleaner output."
   :type 'boolean)
 
+(defcustom helm-org-multi-wiki-create-entry-function
+  #'org-multi-wiki-visit-entry
+  "Function used to create a new entry from the dummy source.
+
+This function should accept the following arguments:
+
+  (func TITLE :namespace NAMESPACE)
+
+where TITLE is the name of the new entry and NAMESPACE is a
+symbol to denote the namespace. See `org-multi-wiki-visit-entry'
+for an example, which is the default value."
+  :type 'function)
+
+(defsubst helm-org-multi-wiki--create-entry (namespace title)
+  "In NAMESPACE, create a new entry from TITLE."
+  (funcall helm-org-multi-wiki-create-entry-function title :namespace namespace))
+
 (defun helm-org-multi-wiki-create-entry-from-input (namespace)
   "Create an entry in NAMESPACE from the input in the dummy source."
-  (let ((inp (helm-get-selection)))
-    (if (not (string-empty-p inp))
-        (helm-run-after-exit #'org-multi-wiki-visit-entry inp :namespace namespace)
+  (let ((title (helm-get-selection)))
+    (if (not (string-empty-p title))
+        (helm-run-after-exit #'helm-org-multi-wiki--create-entry namespace title)
       (user-error "Input is empty"))))
 
 ;;;###autoload
@@ -220,8 +237,7 @@ NAMESPACES and FIRST are the same as in `helm-org-multi-wiki'."
                             (if (equal namespace first)
                                 " (current)"
                               ""))
-                    (lambda (inp)
-                      (org-multi-wiki-visit-entry inp :namespace namespace))))
+                    (-partial #'helm-org-multi-wiki--create-entry namespace)))
             (if (and first (> (length namespaces) 1))
                 (cons first (-remove-item first namespaces))
               namespaces))))

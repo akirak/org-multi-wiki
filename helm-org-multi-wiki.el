@@ -128,17 +128,19 @@ This function is only provided as a utility."
      (interactive)
      (helm-org-multi-wiki-create-entry-from-input (quote ,namespace))))
 
-(defun helm-org-multi-wiki--insert-link (marker &optional modify-headline)
+(defun helm-org-multi-wiki--insert-link (marker &optional modify-label)
   "Insert a link to a heading.
 
-MARKER is the marker to the link target."
+MARKER is the marker to the link target.
+
+If MODIFY-LABEL is non-nil, it prompts for the link text."
   (let* ((plist (with-current-buffer (marker-buffer marker)
                   (org-with-wide-buffer
                    (goto-char marker)
                    (org-multi-wiki--get-link-data nil t))))
          (headline (plist-get plist :headline))
-         (link-text (if modify-headline
-                        (read-string "Headline: " headline)
+         (link-text (if modify-label
+                        (read-string "Link label: " headline)
                       headline)))
     (helm-org-multi-wiki--insert-link-or-replace (plist-get plist :link)
                                                  link-text)))

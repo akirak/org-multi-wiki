@@ -27,6 +27,7 @@ It uses alphapapa's [[https://github.com/alphapapa/org-ql][helm-org-ql]] for sea
   -  [[#helm-org-multi-wiki][helm-org-multi-wiki]]
     -  [[#running-on-particular-namespaces][Running on particular namespaces]]
     -  [[#quickly-creating-an-entry-in-a-particular-namespace][Quickly creating an entry in a particular namespace]]
+    -  [[#inserting-a-link][Inserting a link]]
   -  [[#moving-contents][Moving contents]]
 -  [[#details][Details]]
   -  [[#wiki-link-type][wiki link type]]
@@ -163,6 +164,13 @@ The dummy source has a dedicated keymap =helm-make-helm-org-multi-wiki-dummy-sou
 With this configuration, you can create an entry in =programming= wiki from the minibuffer input by pressing ~C-c C-c p~.
 
 =helm-org-multi-wiki-def-create-entry-action= macro defines an interactive function which exits the running helm session and visits an entry.
+**** Inserting a link
+:PROPERTIES:
+:CREATED_TIME: [2021-02-09 Tue 00:06]
+:END:
+=helm-org-multi-wiki-insert-link= lets you select a heading from all namespaces and inserts a link to the heading.
+
+If there is an active region, it replaces the selected text with a link.
 *** Moving contents
 You can move an existing subtree to an wiki using =org-multi-wiki-create-entry-from-subtree= command.
 ** Details

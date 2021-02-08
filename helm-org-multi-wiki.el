@@ -4,7 +4,7 @@
 
 ;; Author: Akira Komamura <akira.komamura@gmail.com>
 ;; Version: 0.3.4
-;; Package-Requires: ((emacs "26.1") (org-multi-wiki "0.4") (org-ql "0.5") (dash "2.12") (helm-org-ql "0.5") (helm "3.5"))
+;; Package-Requires: ((emacs "26.1") (org "9.3") (org-multi-wiki "0.4") (org-ql "0.5") (dash "2.12") (helm-org-ql "0.5") (helm "3.5"))
 ;; Keywords: org, outlines
 ;; URL: https://github.com/akirak/org-multi-wiki
 
@@ -36,6 +36,7 @@
 (require 'org-ql)
 (require 'helm)
 (require 'helm-org-ql)
+(require 'ol)
 
 ;; Silence byte-compiler
 (defvar helm-map)
@@ -88,6 +89,25 @@ symbol to denote the namespace. See `org-multi-wiki-visit-entry'
 for an example, which is the default value."
   :type 'function)
 
+(defcustom helm-org-multi-wiki-insert-link-actions
+  '(("Insert a link" . helm-org-multi-wiki--insert-link)
+    ("Insert a link (modify the label)" . helm-org-multi-wiki--insert-link-with-label))
+  "Alist of actions used to insert a link to a heading."
+  :type 'alist)
+
+(defmacro helm-org-multi-wiki-with-namespace-buffers (namespaces &rest progn)
+  "Evaluate an expression with namespace buffers.
+
+This macro sets `helm-org-multi-wiki-buffers` to buffers from NAMESPACES
+and evaluate PROGN."
+  (declare (indent 1))
+  `(progn
+     (setq helm-org-multi-wiki-buffers
+           (->> ,namespaces
+                (--map (org-multi-wiki-entry-files it :as-buffers t))
+                (apply #'append)))
+     ,@progn))
+
 (defsubst helm-org-multi-wiki--create-entry (namespace title)
   "In NAMESPACE, create a new entry from TITLE."
   (funcall helm-org-multi-wiki-create-entry-function title :namespace namespace))
@@ -107,6 +127,70 @@ This function is only provided as a utility."
   `(defun ,(intern (format "helm-org-multi-wiki-create/%s" namespace)) ()
      (interactive)
      (helm-org-multi-wiki-create-entry-from-input (quote ,namespace))))
+
+(defun helm-org-multi-wiki--insert-link (marker &optional modify-label)
+  "Insert a link to a heading.
+
+MARKER is the marker to the link target.
+
+If MODIFY-LABEL is non-nil, it prompts for the link text."
+  (let* ((plist (with-current-buffer (marker-buffer marker)
+                  (org-with-wide-buffer
+                   (goto-char marker)
+                   (org-multi-wiki--get-link-data nil t))))
+         (headline (plist-get plist :headline))
+         (link-text (if modify-label
+                        (read-string "Link label: " headline)
+                      headline)))
+    (helm-org-multi-wiki--insert-link-or-replace (plist-get plist :link)
+                                                 link-text)))
+
+(defun helm-org-multi-wiki--insert-link-with-label (marker)
+  "Insert a link to a heading, with the link text modified.
+
+MARKER is the marker to the link target."
+  (helm-org-multi-wiki--insert-link marker t))
+
+(defun helm-org-multi-wiki--insert-new-entry-link (namespace title)
+  "Insert a link to a non-existent entry.
+
+NAMESPACE is the namespace in which a new entry will be created,
+and TITLE is the title of the entry."
+  (-> (org-multi-wiki--make-link namespace title :to-file t)
+      (helm-org-multi-wiki--insert-link-or-replace title)))
+
+(defun helm-org-multi-wiki--insert-link-or-replace (link text)
+  "Insert a link or replace the region with a link.
+
+When there is no active region, this function inserts a link to
+LINK with TEXT as the label.
+
+When there is an active region, replace the selected text with a
+link with the original text as the label. The second argument
+will be discarded."
+  (if (region-active-p)
+      (let* ((begin (region-beginning))
+             (end (region-end))
+             (text (buffer-substring-no-properties begin end)))
+        (delete-region begin end)
+        (goto-char begin)
+        (insert (org-link-make-string link text)))
+    (org-link-make-string link text)))
+
+(defun helm-org-multi-wiki-file-link-insert-action (buffer)
+  "Insert a link to BUFFER, with its first heading as the link text."
+  (-let (((plist headline) (with-current-buffer buffer
+                             (org-with-wide-buffer
+                              (goto-char (point-min))
+                              (list (org-multi-wiki-entry-file-p)
+                                    (when (re-search-forward org-heading-regexp nil t)
+                                      (org-get-heading t t t t)))))))
+    (helm-org-multi-wiki--insert-link-or-replace (org-multi-wiki--make-link
+                                                  (plist-get plist :namespace)
+                                                  (plist-get plist :basename)
+                                                  :to-file t)
+                                                 (or headline
+                                                     (plist-get plist :basename)))))
 
 (defsubst helm-org-multi-wiki--format-ns-cand (x)
   "Format a helm candidate label of a namespace entry X."
@@ -131,6 +215,21 @@ This function is only provided as a utility."
                         (cons (helm-org-multi-wiki--format-ns-cand x)
                               x))
                       org-multi-wiki-namespace-list)))))
+
+(defun helm-org-multi-wiki--normalize-namespaces (namespaces)
+  "Normalize NAMESPACES, i.e. convert to a list."
+  (cl-etypecase namespaces
+    ;; Normalize namespaces to make it a list of symbols.
+    (null (if org-multi-wiki-current-namespace
+              (list org-multi-wiki-current-namespace)
+            (let ((namespaces (helm-org-multi-wiki-namespace
+                               :prompt "Switch to a namespace: ")))
+              (unless namespaces
+                (user-error "Please select a namespace"))
+              (org-multi-wiki-switch (car-safe namespaces))
+              namespaces)))
+    (list namespaces)
+    (symbol (list namespaces))))
 
 (cl-defun helm-org-multi-wiki-namespace (&key prompt action)
   "Select directory namespaces using helm.
@@ -247,6 +346,9 @@ FIRST is the target namespace of the first action, as in
                 (cons first (-remove-item first namespaces))
               namespaces))))
 
+(defconst helm-org-multi-wiki-prompt
+  "Query (boolean AND): ")
+
 ;;;###autoload
 (cl-defun helm-org-multi-wiki (&optional namespaces &key first)
   "Visit an entry or create a new entry.
@@ -256,44 +358,29 @@ It can be a list of symbols or a symbol.
 
 If FIRST is given, it will be the default namespace in which an
 entry is created."
-  (interactive)
+  (interactive (list current-prefix-arg))
   ;; Based on the implementation of helm-org-ql.
-  (pcase current-prefix-arg
-    ('(4) (let ((current-prefix-arg nil))
-            (helm-org-multi-wiki-namespace
-             :action
-             (list (cons "Run helm-org-mult-wiki on selected namespaces"
-                         (lambda (_)
-                           (helm-org-multi-wiki (helm-marked-candidates))))))))
-    (_ (let* ((namespaces (cl-etypecase namespaces
-                            ;; Normalize namespaces to make it a list of symbols.
-                            (null (if org-multi-wiki-current-namespace
-                                      (list org-multi-wiki-current-namespace)
-                                    (let ((namespaces (helm-org-multi-wiki-namespace
-                                                       :prompt "Switch to a namespace: ")))
-                                      (unless namespaces
-                                        (user-error "Please select a namespace"))
-                                      (org-multi-wiki-switch (car-safe namespaces))
-                                      namespaces)))
-                            (list namespaces)
-                            (symbol (list namespaces))))
-              (boolean 'and)
-              (helm-input-idle-delay helm-org-ql-input-idle-delay)
-              (files (->> namespaces
-                          (--map (org-multi-wiki-entry-files it :as-buffers t))
-                          (apply #'append)))
-              (namespace-str (mapconcat #'symbol-name namespaces ",")))
-         (setq helm-org-multi-wiki-buffers files)
-         (helm :prompt (format "Query (boolean %s): " (-> boolean symbol-name upcase))
-               :buffer "*helm org multi wiki*"
-               :sources
-               (delq nil
-                     (list (when helm-org-multi-wiki-show-files
-                             (helm-make-source (format "Wiki files in %s" namespace-str)
-                                 'helm-org-multi-wiki-source-buffers))
-                           (helm-make-source (format "Wiki (%s)" namespace-str)
-                               'helm-org-multi-wiki-source)
-                           (helm-org-multi-wiki-make-dummy-source namespaces :first first))))))))
+  (if (equal namespaces '(4))
+      (helm-org-multi-wiki-namespace
+       :action
+       (list (cons "Run helm-org-mult-wiki on selected namespaces"
+                   (lambda (_)
+                     (helm-org-multi-wiki (helm-marked-candidates))))))
+    (let* ((namespaces (helm-org-multi-wiki--normalize-namespaces namespaces))
+           (helm-input-idle-delay helm-org-ql-input-idle-delay)
+           (namespace-str (mapconcat #'symbol-name namespaces ",")))
+      (helm-org-multi-wiki-with-namespace-buffers namespaces
+        (helm :prompt helm-org-multi-wiki-prompt
+              :buffer "*helm org multi wiki*"
+              :sources
+              (delq nil
+                    (list (when helm-org-multi-wiki-show-files
+                            (helm-make-source (format "Wiki files in %s" namespace-str)
+                                'helm-org-multi-wiki-source-buffers))
+                          (helm-make-source (format "Wiki (%s)" namespace-str)
+                              'helm-org-multi-wiki-source)
+                          (helm-org-multi-wiki-make-dummy-source namespaces
+                                                                 :first first))))))))
 
 ;;;###autoload
 (defun helm-org-multi-wiki-all ()
@@ -301,6 +388,37 @@ entry is created."
   (interactive)
   (helm-org-multi-wiki (mapcar #'car org-multi-wiki-namespace-list)
                        :first org-multi-wiki-current-namespace))
+
+;;;###autoload
+(cl-defun helm-org-multi-wiki-insert-link (&key first)
+  "Insert a link or converts the region to a link.
+
+FIRST is the default namespace when you create a non-existent
+entry."
+  (interactive)
+  (unless (derived-mode-p 'org-mode)
+    (user-error "Not in org-mode"))
+  ;; TODO: Add support for regions
+  (let* ((namespaces (mapcar #'car org-multi-wiki-namespace-list))
+         (helm-input-idle-delay helm-org-ql-input-idle-delay)
+         (namespace-str (mapconcat #'symbol-name namespaces ",")))
+    (helm-org-multi-wiki-with-namespace-buffers namespaces
+      (helm :prompt "Insert a link to a heading: "
+            :buffer "*helm org multi wiki*"
+            :input (if (region-active-p)
+                       (buffer-substring-no-properties (region-beginning) (region-end))
+                     "")
+            :sources
+            (list (when helm-org-multi-wiki-show-files
+                    (helm-make-source (format "Wiki files in %s" namespace-str)
+                        'helm-org-multi-wiki-source-buffers
+                      :action #'helm-org-multi-wiki-file-link-insert-action))
+                  (helm-make-source (format "Wiki (%s)" namespace-str)
+                      'helm-org-multi-wiki-source
+                    :action helm-org-multi-wiki-insert-link-actions)
+                  (helm-org-multi-wiki-make-dummy-source namespaces
+                    :action #'helm-org-multi-wiki--insert-new-entry-link
+                    :first first))))))
 
 (provide 'helm-org-multi-wiki)
 ;;; helm-org-multi-wiki.el ends here

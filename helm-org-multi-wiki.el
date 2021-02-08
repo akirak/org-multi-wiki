@@ -234,7 +234,7 @@ will be discarded."
 (cl-defun helm-org-multi-wiki-namespace (&key prompt action)
   "Select directory namespaces using helm.
 
-PROMPT and ACTION are passed to helm."nn
+PROMPT and ACTION are passed to helm."
   (interactive)
   (let ((prompt (or prompt "org-multi-wiki namespaces: "))
         (action (or action

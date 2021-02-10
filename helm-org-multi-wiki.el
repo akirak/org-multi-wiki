@@ -175,7 +175,7 @@ will be discarded."
         (delete-region begin end)
         (goto-char begin)
         (insert (org-link-make-string link text)))
-    (org-link-make-string link text)))
+    (insert (org-link-make-string link text))))
 
 (defun helm-org-multi-wiki-file-link-insert-action (buffer)
   "Insert a link to BUFFER, with its first heading as the link text."
@@ -325,23 +325,29 @@ and return an S expression query."
                        buf))
    (action :initform 'helm-org-multi-wiki-file-actions)))
 
-(cl-defun helm-org-multi-wiki-make-dummy-source (namespaces &key first)
+(cl-defun helm-org-multi-wiki-make-dummy-source (namespaces &key
+                                                            first
+                                                            action)
   "Create a dummy helm source.
 
 NAMESPACES is a list of symbols.
 
 FIRST is the target namespace of the first action, as in
-`helm-org-multi-wiki' function."
+`helm-org-multi-wiki' function.
+
+If ACTION is given, it is used to handle the input. It should be
+a function that takes two arguments: a string and a namespace."
   (helm-build-dummy-source "New entry"
     :keymap helm-org-multi-wiki-dummy-source-map
     :action
-    (mapcar (lambda (namespace)
-              (cons (format "Create a new entry in %s%s"
-                            namespace
-                            (if (equal namespace first)
-                                " (current)"
-                              ""))
-                    (-partial #'helm-org-multi-wiki--create-entry namespace)))
+    (mapcar `(lambda (namespace)
+               (cons (format "Create a new entry in %s%s"
+                             namespace
+                             (if (equal namespace ,first)
+                                 " (current)"
+                               ""))
+                     (-partial (or (quote ,action) #'helm-org-multi-wiki--create-entry)
+                               namespace)))
             (if (and first (> (length namespaces) 1))
                 (cons first (-remove-item first namespaces))
               namespaces))))

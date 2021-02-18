@@ -641,7 +641,7 @@ e.g. when `org-capture' is run."
                                                              default)
                                                      nil nil default)))
                                     (when custom-id
-                                      (org-set-property "CUSTOM_ID" custom-id)
+                                      (org-entry-put nil "CUSTOM_ID" custom-id)
                                       custom-id))))))
         (list :link (org-multi-wiki--make-link (plist-get plist :namespace)
                                                (plist-get plist :basename)

@@ -577,7 +577,7 @@ See `org-multi-wiki-visit-entry' for BUF, NAMESPACE, FPATH, and DIR."
 ;;;###autoload
 (defun org-multi-wiki-store-link ()
   "Store a link."
-  (when-let* ((plist (org-multi-wiki--get-link-data nil (not (called-interactively-p 'any))))
+  (when-let* ((plist (org-multi-wiki--get-link-data nil))
               (link-brackets (org-link-make-string (plist-get plist :link)
                                                    (plist-get plist :headline))))
     (org-link-store-props :type "wiki"
@@ -616,15 +616,10 @@ When TO-FILE, it generates a link to the file itself."
                    (concat "::#" custom-id))
               (concat "::*" headline))))
 
-(defun org-multi-wiki--get-link-data (&optional origin-ns
-                                                stored-noninteractively)
+(defun org-multi-wiki--get-link-data (&optional origin-ns)
   "Return data needed for generating a link.
 
-ORIGIN-NS, if specified, is the namespace of the link orientation.
-
-STORED-NONINTERACTIVELY should be set to non-nil if
-`org-multi-wiki-store-link' is not called interactively,
-e.g. when `org-capture' is run."
+ORIGIN-NS, if specified, is the namespace of the link orientation."
   (when (derived-mode-p 'org-mode)
     (when-let (plist (org-multi-wiki-entry-file-p))
       (when (org-before-first-heading-p)
@@ -632,7 +627,6 @@ e.g. when `org-capture' is run."
       (-let* (((level _ _ _ headline _) (org-heading-components))
               (custom-id (or (org-entry-get nil "CUSTOM_ID")
                              (and org-multi-wiki-want-custom-id
-                                  (not stored-noninteractively)
                                   (or (org-multi-wiki--top-level-link-fragments (plist-get plist :namespace))
                                       (> level 1))
                                   (let* ((default (funcall org-multi-wiki-custom-id-escape-fn headline))
@@ -641,7 +635,7 @@ e.g. when `org-capture' is run."
                                                              default)
                                                      nil nil default)))
                                     (when custom-id
-                                      (org-set-property "CUSTOM_ID" custom-id)
+                                      (org-entry-put nil "CUSTOM_ID" custom-id)
                                       custom-id))))))
         (list :link (org-multi-wiki--make-link (plist-get plist :namespace)
                                                (plist-get plist :basename)

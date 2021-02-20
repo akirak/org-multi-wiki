@@ -142,7 +142,7 @@ If MODIFY-LABEL is non-nil, it prompts for the link text."
          (link-text (if modify-label
                         (read-string "Link label: " headline)
                       headline)))
-    (helm-org-multi-wiki--insert-link-or-replace (plist-get plist :link)
+    (helm-org-multi-wiki--make-link-dwim (plist-get plist :link)
                                                  link-text)))
 
 (defun helm-org-multi-wiki--insert-link-with-label (marker)
@@ -157,24 +157,58 @@ MARKER is the marker to the link target."
 NAMESPACE is the namespace in which a new entry will be created,
 and TITLE is the title of the entry."
   (-> (org-multi-wiki--make-link namespace title :to-file t)
-      (helm-org-multi-wiki--insert-link-or-replace title)))
+      (helm-org-multi-wiki--make-link-dwim title)))
 
-(defun helm-org-multi-wiki--insert-link-or-replace (link text)
-  "Insert a link or replace the region with a link.
+(defun helm-org-multi-wiki--link-info-at-point ()
+  "Return information on the link at point if any."
+  (when-let (plist0 (get-char-property (point) 'htmlize-link))
+    (save-match-data
+      (pcase (org-in-regexp org-link-any-re 2)
+        (`(,begin . ,end)
+         (let ((raw (buffer-substring-no-properties begin end)))
+           (append (list :begin begin :end end
+                         :text (when (string-match org-link-bracket-re raw)
+                                 (match-string 2 raw)))
+                   ;; Contains :uri
+                   plist0)))))))
 
-When there is no active region, this function inserts a link to
-LINK with TEXT as the label.
+(defun helm-org-multi-wiki--verbatim-info-at-point ()
+  "Return information on the verbatim at point if any."
+  (save-match-data
+    (pcase (org-in-regexp org-verbatim-re 2)
+      (`(,begin . ,end)
+       (list :begin begin :end end
+             :text (buffer-substring-no-properties (match-end 3) (match-end 4)))))))
+
+(defun helm-org-multi-wiki--link-context ()
+  "Identify the thing at point for linking."
+  (or (when (region-active-p)
+        (let* ((begin (region-beginning))
+               (end (region-end))
+               (text (buffer-substring-no-properties begin end)))
+          (list :begin begin :end end :text text)))
+      (-some->> (helm-org-multi-wiki--link-info-at-point)
+        (cons 'link))
+      (-some->> (helm-org-multi-wiki--verbatim-info-at-point)
+        (cons 'verbatim))))
+
+(defun helm-org-multi-wiki--make-link-dwim (link text)
+  "Produce an Org link depending on the context.
 
 When there is an active region, replace the selected text with a
-link with the original text as the label. The second argument
-will be discarded."
-  (if (region-active-p)
-      (let* ((begin (region-beginning))
-             (end (region-end))
-             (text (buffer-substring-no-properties begin end)))
+LINK with the original TEXT as the label. The second argument
+will be discarded.
+
+When the point is on a link/verbatim, replace it with a link,
+maintaining its text.
+
+Otherwise, it inserts a link to LINK with TEXT as the label."
+  (if-let (context (helm-org-multi-wiki--link-context))
+      (-let (((&plist :begin :end) (cdr context)))
         (delete-region begin end)
         (goto-char begin)
-        (insert (org-link-make-string link text)))
+        (insert (org-link-make-string link (or (plist-get (cdr context) :text)
+                                               text))))
     (insert (org-link-make-string link text))))
 
 (defun helm-org-multi-wiki-file-link-insert-action (buffer)
@@ -185,12 +219,12 @@ will be discarded."
                               (list (org-multi-wiki-entry-file-p)
                                     (when (re-search-forward org-heading-regexp nil t)
                                       (org-get-heading t t t t)))))))
-    (helm-org-multi-wiki--insert-link-or-replace (org-multi-wiki--make-link
-                                                  (plist-get plist :namespace)
-                                                  (plist-get plist :basename)
-                                                  :to-file t)
-                                                 (or headline
-                                                     (plist-get plist :basename)))))
+    (helm-org-multi-wiki--make-link-dwim (org-multi-wiki--make-link
+                                          (plist-get plist :namespace)
+                                          (plist-get plist :basename)
+                                          :to-file t)
+                                         (or headline
+                                             (plist-get plist :basename)))))
 
 (defsubst helm-org-multi-wiki--format-ns-cand (x)
   "Format a helm candidate label of a namespace entry X."
@@ -407,13 +441,21 @@ entry."
   ;; TODO: Add support for regions
   (let* ((namespaces (mapcar #'car org-multi-wiki-namespace-list))
          (helm-input-idle-delay helm-org-ql-input-idle-delay)
-         (namespace-str (mapconcat #'symbol-name namespaces ",")))
+         (namespace-str (mapconcat #'symbol-name namespaces ","))
+         (context (helm-org-multi-wiki--link-context)))
     (helm-org-multi-wiki-with-namespace-buffers namespaces
-      (helm :prompt "Insert a link to a heading: "
+      (helm :prompt (cl-case (car context)
+                      (region
+                       "Replace the region with a link: ")
+                      (link
+                       "Replace the link: ")
+                      (verbatim
+                       "Replace the text with a link: ")
+                      (_
+                       "Insert a link: "))
             :buffer "*helm org multi wiki*"
-            :input (if (region-active-p)
-                       (buffer-substring-no-properties (region-beginning) (region-end))
-                     "")
+            :input (-let (((&plist :text :uri) (cdr context)))
+                     (or text uri))
             :sources
             (list (when helm-org-multi-wiki-show-files
                     (helm-make-source (format "Wiki files in %s" namespace-str)
@@ -423,8 +465,8 @@ entry."
                       'helm-org-multi-wiki-source
                     :action helm-org-multi-wiki-insert-link-actions)
                   (helm-org-multi-wiki-make-dummy-source namespaces
-                    :action #'helm-org-multi-wiki--insert-new-entry-link
-                    :first first))))))
+                                                         :action #'helm-org-multi-wiki--insert-new-entry-link
+                                                         :first first))))))
 
 (provide 'helm-org-multi-wiki)
 ;;; helm-org-multi-wiki.el ends here

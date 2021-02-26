@@ -847,6 +847,8 @@ the source file."
             ;; TODO: Apply the template to the new file but don't create an entry in it
             (org-multi-wiki--setup-new-buffer buf namespace fpath directory)
             (org-refile nil nil (list heading fpath nil nil))
+            (with-current-buffer buf
+              (goto-char (point-min)))
             (funcall org-multi-wiki-display-buffer-fn buf))
         (error
          ;; Clean up the created buffer if it has zero length

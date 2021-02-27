@@ -134,16 +134,15 @@ This function is only provided as a utility."
 MARKER is the marker to the link target.
 
 If MODIFY-LABEL is non-nil, it prompts for the link text."
-  (let* ((plist (with-current-buffer (marker-buffer marker)
-                  (org-with-wide-buffer
-                   (goto-char marker)
-                   (org-multi-wiki--get-link-data nil t))))
+  (let* ((plist (org-with-point-at marker
+                  ;; TODO: Pass the origin-ns as an argument
+                  (org-multi-wiki--get-link-data)))
          (headline (plist-get plist :headline))
          (link-text (if modify-label
                         (read-string "Link label: " headline)
                       headline)))
     (helm-org-multi-wiki--make-link-dwim (plist-get plist :link)
-                                                 link-text)))
+                                         link-text)))
 
 (defun helm-org-multi-wiki--insert-link-with-label (marker)
   "Insert a link to a heading, with the link text modified.
@@ -186,7 +185,7 @@ and TITLE is the title of the entry."
         (let* ((begin (region-beginning))
                (end (region-end))
                (text (buffer-substring-no-properties begin end)))
-          (list :begin begin :end end :text text)))
+          (list 'region :begin begin :end end :text text)))
       (-some->> (helm-org-multi-wiki--link-info-at-point)
         (cons 'link))
       (-some->> (helm-org-multi-wiki--verbatim-info-at-point)

@@ -44,11 +44,56 @@
 
 (declare-function org-ql-select "ext:org-ql-select")
 
+(defvar recentf-exclude)
+
 (defgroup org-multi-wiki nil
   "Multiple wikis based on org-mode."
   :group 'org)
 
 ;;;;  Custom variables
+(defvar org-multi-wiki-file-regexp)
+
+(defun org-multi-wiki--extensions-to-regexp (extensions)
+  "Produce a regular expression for a list of file EXTENSIONS."
+  (concat "\\`[^.].*\\(?:"
+          (mapconcat (lambda (ext)
+                       (concat "\\(?:"
+                               (regexp-quote ext)
+                               "\\)"))
+                     extensions
+                     "\\|")
+          "\\)\\'"))
+
+(defcustom org-multi-wiki-file-extensions '(".org" ".org.gpg")
+  "List of file extensions for wiki entries.
+
+The first one is used to create a new file by default."
+  :type '(repeat string)
+  :set (lambda (sym value)
+         (set sym value)
+         (setq org-multi-wiki-file-regexp
+               (org-multi-wiki--extensions-to-regexp value)))
+  :group 'org-multi-wiki)
+
+(defvar org-multi-wiki-recentf-regexp nil)
+
+(defun org-multi-wiki--recentf-regexp (namespace-list)
+  "Compile `org-multi-wiki-recentf-regexp' for later use.
+
+NAMESPACE-LIST should be the value of the namespace list."
+  (rx-to-string `(and bol
+                      (or ,@(->> namespace-list
+                                 (--map (let ((dir (file-name-as-directory
+                                                    (expand-file-name (nth 1 it)))))
+                                          (->> (list dir (ignore-errors
+                                                           (file-truename dir)))
+                                               (-non-nil)
+                                               (-uniq))))
+                                 (-flatten-n 1)))
+                      (+ anything)
+                      (or ,@org-multi-wiki-file-extensions)
+                      eol)))
+
 (defcustom org-multi-wiki-namespace-list
   nil
   "List of namespace configurations for wikis.
@@ -74,6 +119,10 @@ custom variables for the global setting:
                                ((const :doc "Recursively search files in subdirectories"
                                        :recursive)
                                 (boolean))))))
+  :set (lambda (sym value)
+         (set sym value)
+         (setq org-multi-wiki-recentf-regexp
+               (org-multi-wiki--recentf-regexp value)))
   :group 'org-multi-wiki)
 
 (define-obsolete-variable-alias 'org-multi-wiki-directories
@@ -88,29 +137,15 @@ This should be the first element of one of the entries in
   :type 'symbol
   :group 'org-multi-wiki)
 
-(defvar org-multi-wiki-file-regexp)
-
-(defun org-multi-wiki--extensions-to-regexp (extensions)
-  "Produce a regular expression for a list of file EXTENSIONS."
-  (concat "\\`[^.].*\\(?:"
-          (mapconcat (lambda (ext)
-                       (concat "\\(?:"
-                               (regexp-quote ext)
-                               "\\)"))
-                     extensions
-                     "\\|")
-          "\\)\\'"))
-
-(defcustom org-multi-wiki-file-extensions '(".org" ".org.gpg")
-  "List of file extensions for wiki entries.
-
-The first one is used to create a new file by default."
-  :type '(repeat string)
-  :set (lambda (sym value)
-         (set sym value)
-         (setq org-multi-wiki-file-regexp
-               (org-multi-wiki--extensions-to-regexp value)))
-  :group 'org-multi-wiki)
+(defcustom org-multi-wiki-recentf-exclude nil
+  "Whether to exclude wiki files from recent files."
+  :type 'boolean
+  :set (lambda (symbol value)
+         (set symbol value)
+         (require 'recentf)
+         (if value
+             (add-to-list 'recentf-exclude #'org-multi-wiki-recentf-file-p)
+           (delq #'org-multi-wiki-recentf-file-p recentf-exclude))))
 
 (defcustom org-multi-wiki-escape-file-name-fn
   #'org-multi-wiki-escape-file-name-camelcase-1
@@ -354,6 +389,12 @@ If FILE is omitted, the current buffer is assumed."
                :namespace namespace
                :basename (file-relative-name (file-truename sans-extension)
                                              (file-truename root-directory))))))
+
+;;;###autoload
+(defsubst org-multi-wiki-recentf-file-p (filename)
+  "Test if FILENAME matches the recentf exclude pattern."
+  (when org-multi-wiki-recentf-regexp
+    (string-match-p org-multi-wiki-recentf-regexp filename)))
 
 ;;;###autoload
 (defun org-multi-wiki-in-namespace-p (namespace &optional dir)

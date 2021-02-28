@@ -72,7 +72,7 @@ If it is nil, `org-multi-wiki-current-namespace' will be the default.
 
 Alternatively, you can select other namespaces by pressing TAB in
 the Helm sources."
-  :type (choice nil symbol))
+  :type '(choice nil symbol))
 
 (defcustom helm-org-multi-wiki-namespace-actions
   (quote (("Switch" . org-multi-wiki-switch)

@@ -81,18 +81,19 @@ The first one is used to create a new file by default."
   "Compile `org-multi-wiki-recentf-regexp' for later use.
 
 NAMESPACE-LIST should be the value of the namespace list."
-  (rx-to-string `(and bol
-                      (or ,@(->> namespace-list
-                                 (--map (let ((dir (file-name-as-directory
-                                                    (expand-file-name (nth 1 it)))))
-                                          (->> (list dir (ignore-errors
-                                                           (file-truename dir)))
-                                               (-non-nil)
-                                               (-uniq))))
-                                 (-flatten-n 1)))
-                      (+ anything)
-                      (or ,@org-multi-wiki-file-extensions)
-                      eol)))
+  (when namespace-list
+    (rx-to-string `(and bol
+                        (or ,@(->> namespace-list
+                                   (--map (let ((dir (file-name-as-directory
+                                                      (expand-file-name (nth 1 it)))))
+                                            (->> (list dir (ignore-errors
+                                                             (file-truename dir)))
+                                                 (-non-nil)
+                                                 (-uniq))))
+                                   (-flatten-n 1)))
+                        (+ anything)
+                        (or ,@org-multi-wiki-file-extensions)
+                        eol))))
 
 (defcustom org-multi-wiki-namespace-list
   nil
@@ -341,6 +342,27 @@ file name."
   "Minor mode that should be activated in all wiki buffers."
   nil nil nil)
 
+;;;; Configuration helpers
+;;;###autoload
+(cl-defun org-multi-wiki-add-namespaces (namespaces)
+  "Add entries to `org-multi-wiki-namespace-list'.
+
+This is a convenient function for adding an entry to the namespace list.
+
+NAMESPACES should be a list of entries to add to the
+variable. There won't be duplicate namespaces, and hooks for the
+variable is run if necessary."
+  (dolist (entry namespaces)
+    (let ((cell (assoc (car entry) org-multi-wiki-namespace-list)))
+      (funcall (or (get 'org-multi-wiki-namespace-list 'custom-set) #'set)
+               'org-multi-wiki-namespace-list
+               (if cell
+                   (progn
+                     (setcdr cell (cdr entry))
+                     org-multi-wiki-namespace-list)
+                 (append org-multi-wiki-namespace-list
+                         (list entry)))))))
+
 ;;;; File and directory infrastructure
 (defun org-multi-wiki-check-buffer ()
   "Check if the current buffer is an wiki entry."
@@ -392,7 +414,12 @@ If FILE is omitted, the current buffer is assumed."
 
 ;;;###autoload
 (defsubst org-multi-wiki-recentf-file-p (filename)
-  "Test if FILENAME matches the recentf exclude pattern."
+  "Test if FILENAME matches the recentf exclude pattern.
+
+This is not exactly the same as
+`org-multi-wiki-entry-file-p'. This one tries to be faster by
+using a precompiled regular expression, at the cost of accuracy."
+  ;; The regular expression can be nil if the namespace list is empty
   (when org-multi-wiki-recentf-regexp
     (string-match-p org-multi-wiki-recentf-regexp filename)))
 

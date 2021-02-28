@@ -58,6 +58,22 @@
   "Whether to prepend file list in `helm-org-multi-wiki'."
   :type 'boolean)
 
+(defcustom helm-org-multi-wiki-default-namespace nil
+  "Default namespace for creating a new file.
+
+This option determines which namespace in
+`org-multi-wiki-namespace-list' will be the target of the default
+action in Helm dummy sources in this package.
+
+This should be the symbol for a namespace in
+`org-multi-wiki-namespace-list' or nil.
+
+If it is nil, `org-multi-wiki-current-namespace' will be the default.
+
+Alternatively, you can select other namespaces by pressing TAB in
+the Helm sources."
+  :type (choice nil symbol))
+
 (defcustom helm-org-multi-wiki-namespace-actions
   (quote (("Switch" . org-multi-wiki-switch)
           ("Search in namespace(s)"
@@ -376,7 +392,7 @@ a function that takes two arguments: a string and a namespace."
     (mapcar `(lambda (namespace)
                (cons (format "Create a new entry in %s%s"
                              namespace
-                             (if (equal namespace ,first)
+                             (if (equal namespace org-multi-wiki-current-namespace)
                                  " (current)"
                                ""))
                      (-partial (or (quote ,action) #'helm-org-multi-wiki--create-entry)
@@ -407,7 +423,9 @@ entry is created."
                      (helm-org-multi-wiki (helm-marked-candidates))))))
     (let* ((namespaces (helm-org-multi-wiki--normalize-namespaces namespaces))
            (helm-input-idle-delay helm-org-ql-input-idle-delay)
-           (namespace-str (mapconcat #'symbol-name namespaces ",")))
+           (namespace-str (mapconcat #'symbol-name namespaces ","))
+           (default-namespace (or helm-org-multi-wiki-default-namespace
+                                  org-multi-wiki-current-namespace)))
       (helm-org-multi-wiki-with-namespace-buffers namespaces
         (helm :prompt helm-org-multi-wiki-prompt
               :buffer "*helm org multi wiki*"
@@ -418,15 +436,20 @@ entry is created."
                                 'helm-org-multi-wiki-source-buffers))
                           (helm-make-source (format "Wiki (%s)" namespace-str)
                               'helm-org-multi-wiki-source)
-                          (helm-org-multi-wiki-make-dummy-source namespaces
-                                                                 :first first))))))))
+                          (helm-org-multi-wiki-make-dummy-source
+                           namespaces
+                           :first (or first
+                                      (if (memq default-namespace namespaces)
+                                          default-namespace
+                                        (car namespaces)))))))))))
 
 ;;;###autoload
 (defun helm-org-multi-wiki-all ()
   "Run `helm-org-multi-wiki' on all configured directories."
   (interactive)
   (helm-org-multi-wiki (mapcar #'car org-multi-wiki-namespace-list)
-                       :first org-multi-wiki-current-namespace))
+                       :first (or helm-org-multi-wiki-default-namespace
+                                  org-multi-wiki-current-namespace)))
 
 ;;;###autoload
 (cl-defun helm-org-multi-wiki-insert-link (&key first)
@@ -465,7 +488,9 @@ entry."
                     :action helm-org-multi-wiki-insert-link-actions)
                   (helm-org-multi-wiki-make-dummy-source namespaces
                                                          :action #'helm-org-multi-wiki--insert-new-entry-link
-                                                         :first first))))))
+                                                         :first (or first
+                                                                    helm-org-multi-wiki-default-namespace
+                                                                    org-multi-wiki-current-namespace)))))))
 
 (provide 'helm-org-multi-wiki)
 ;;; helm-org-multi-wiki.el ends here

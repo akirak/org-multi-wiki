@@ -145,7 +145,7 @@ This should be the first element of one of the entries in
          (set symbol value)
          (require 'recentf)
          (if value
-             (add-to-list 'recentf-exclude #'org-multi-wiki-recentf-file-p)
+             (add-to-list 'recentf-exclude #'org-multi-wiki-recentf-file-p t)
            (delq #'org-multi-wiki-recentf-file-p recentf-exclude))))
 
 (defcustom org-multi-wiki-escape-file-name-fn

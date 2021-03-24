@@ -182,7 +182,10 @@ When non-nil, return an empty result from
   :group 'org-multi-wiki)
 
 (defcustom org-multi-wiki-want-custom-id nil
-  "When non-nil, prompt for a CUSTOM_ID property when storing a wiki link to a subheading."
+  "Whether to prompt for a CUSTOM_ID property.
+
+If this variable is non-nil, non-top-level headings in a wiki
+entry will always be linked with a CUSTOM_ID."
   :type 'boolean
   :group 'org-multi-wiki)
 

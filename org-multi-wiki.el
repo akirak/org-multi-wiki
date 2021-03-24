@@ -710,14 +710,15 @@ ORIGIN-NS, if specified, is the namespace of the link orientation."
                                                      nil nil default)))
                                     (when custom-id
                                       (org-entry-put nil "CUSTOM_ID" custom-id)
-                                      custom-id))))))
+                                      custom-id)))))
+              (clean-headline (org-link-display-format headline)))
         (list :link (org-multi-wiki--make-link (plist-get plist :namespace)
                                                (plist-get plist :basename)
                                                :origin-ns origin-ns
                                                :custom-id custom-id
-                                               :headline headline
+                                               :headline clean-headline
                                                :level level)
-              :headline headline)))))
+              :headline clean-headline)))))
 
 (defun org-multi-wiki-strip-namespace (link)
   "Strip namespace from LINK if possible."

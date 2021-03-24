@@ -82,18 +82,19 @@ The first one is used to create a new file by default."
 
 NAMESPACE-LIST should be the value of the namespace list."
   (when namespace-list
-    (rx-to-string `(and bol
-                        (or ,@(->> namespace-list
-                                   (--map (let ((dir (file-name-as-directory
-                                                      (expand-file-name (nth 1 it)))))
-                                            (->> (list dir (ignore-errors
-                                                             (file-truename dir)))
-                                                 (-non-nil)
-                                                 (-uniq))))
-                                   (-flatten-n 1)))
-                        (+ anything)
-                        (or ,@org-multi-wiki-file-extensions)
-                        eol))))
+    (let ((dirs (->> namespace-list
+                     (--map (let ((dir (file-name-as-directory
+                                        (expand-file-name (nth 1 it)))))
+                              (->> (list dir (ignore-errors
+                                               (file-truename dir)))
+                                   (-non-nil)
+                                   (-uniq))))
+                     (-flatten-n 1))))
+      (rx-to-string `(and bol
+                          (or ,@dirs)
+                          (+ anything)
+                          (or ,@org-multi-wiki-file-extensions)
+                          eol)))))
 
 (defcustom org-multi-wiki-namespace-list
   nil
@@ -181,7 +182,10 @@ When non-nil, return an empty result from
   :group 'org-multi-wiki)
 
 (defcustom org-multi-wiki-want-custom-id nil
-  "When non-nil, prompt for a CUSTOM_ID property when storing a wiki link to a subheading."
+  "Whether to prompt for a CUSTOM_ID property.
+
+If this variable is non-nil, non-top-level headings in a wiki
+entry will always be linked with a CUSTOM_ID."
   :type 'boolean
   :group 'org-multi-wiki)
 

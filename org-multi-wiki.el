@@ -697,7 +697,9 @@ ORIGIN-NS, if specified, is the namespace of the link orientation."
                              (and org-multi-wiki-want-custom-id
                                   (or (org-multi-wiki--top-level-link-fragments (plist-get plist :namespace))
                                       (> level 1))
-                                  (let* ((default (funcall org-multi-wiki-custom-id-escape-fn headline))
+                                  (let* ((default (->> headline
+                                                       (org-link-display-format)
+                                                       (funcall org-multi-wiki-custom-id-escape-fn)))
                                          (custom-id (read-string
                                                      (format "CUSTOM_ID for the heading [%s]: "
                                                              default)

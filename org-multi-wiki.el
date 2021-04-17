@@ -743,6 +743,7 @@ The custom ID is optional, so you don't have to generate it."
        (-map (pcase-lambda (`(,key . ,data))
                (cons key (frecency-score data))))
        (-sort (-on #'> #'cdr))
+       (--filter (> (cdr it) 0))
        (-map #'car)))
 
 (defun org-multi-wiki-recently-visited-entries ()
@@ -751,6 +752,7 @@ The custom ID is optional, so you don't have to generate it."
        (-map (pcase-lambda (`(,key . ,data))
                (cons key (frecency-score data))))
        (-sort (-on #'> #'cdr))
+       (--filter (> (cdr it) 0))
        (-map #'car)))
 
 ;;;; Custom link type

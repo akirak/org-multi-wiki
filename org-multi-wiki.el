@@ -389,6 +389,26 @@ variable is run if necessary."
                            (mapcar #'car org-multi-wiki-namespace-list)
                            nil t nil nil org-multi-wiki-current-namespace)))
 
+(defsubst org-multi-wiki--org-extension (file)
+  "Return non-nil if FILE is an Org file name.
+
+This functions returns the extension if the file"
+  (--find (string-suffix-p it file) org-multi-wiki-file-extensions))
+
+(defun org-multi-wiki--relative-path (file namespace &optional strip-extension)
+  "Return the relative path of an Org file from the namespace root.
+
+FILE must be an absolute path to the Org file. NAMESPACE must be
+a symbol. If STRIP-EXTENSION is non-nil, the file suffix will be
+removed if it is included in `org-multi-wiki-file-extensions'."
+  (let ((root (file-truename (cdr-get (alist-get namespace
+                                                 org-multi-wiki-namespace-list))))
+        (truename (file-truename file)))
+    (file-relative-name (if strip-extension
+                            (org-multi-wiki--strip-org-extension truename)
+                          truename)
+                        root)))
+
 ;;;###autoload
 (defun org-multi-wiki-entry-file-p (&optional file)
   "Check if FILE is a wiki entry.
@@ -672,7 +692,8 @@ The custom ID is optional, so you don't have to generate it."
                       #'org-multi-wiki-entry-reference-equal-p))
          (new-cdr (frecency-update (cdr cell))))
     (when cell
-      (delete cell org-multi-wiki-entry-frecency-data))
+      (cl-delete cell org-multi-wiki-entry-frecency-data
+                 :test #'org-multi-wiki-entry-reference-equal-p))
     (push (cons entry-reference new-cdr)
           org-multi-wiki-entry-frecency-data)
     nil))
@@ -753,7 +774,8 @@ The custom ID is optional, so you don't have to generate it."
                                           `(heading ,headline)
                                           :action '(point)))
                               (user-error "Cannot find an entry with heading %s" headline))))))
-        (when pos (goto-char pos))))))
+        (when pos (goto-char pos))
+        (org-multi-wiki--log-marker-visit (point-marker))))))
 
 ;;;###autoload
 (defun org-multi-wiki-store-link ()
@@ -761,6 +783,11 @@ The custom ID is optional, so you don't have to generate it."
   (when-let* ((plist (org-multi-wiki--get-link-data nil))
               (link-brackets (org-link-make-string (plist-get plist :link)
                                                    (plist-get plist :headline))))
+    ;; If the user stores a link to the entry, he/she may want to
+    ;; visit it soon.
+    (save-excursion
+      (ignore-errors (org-back-to-heading))
+      (org-multi-wiki--log-marker-visit (point-marker)))
     (org-link-store-props :type "wiki"
                           ;; :file (plist-get plist :file)
                           ;; :node headline
@@ -845,10 +872,9 @@ ORIGIN-NS, if specified, is the namespace of the link orientation."
 
 (defun org-multi-wiki--strip-org-extension (filename)
   "Strip .org or .org.gpg from FILENAME."
-  (save-match-data
-    (if (string-match (rx (or ".org" ".org.gpg") eos) filename)
-        (substring filename 0 (car (match-data)))
-      filename)))
+  (if-let (extension (org-multi-wiki--org-extension filename))
+      (string-remove-suffix extension filename)
+    filename))
 
 (defun org-multi-wiki-complete-link ()
   "Support for the Org link completion mechanism."
@@ -952,7 +978,8 @@ specify a FILENAME."
                                                      (org-multi-wiki-link-file-name
                                                       file :namespace namespace)))))
                        :namespace namespace)))
-  (let* ((dir (org-multi-wiki-directory namespace))
+  (let* ((namespace (or namespace org-multi-wiki-current-namespace))
+         (dir (org-multi-wiki-directory namespace))
          (fpath (progn
                   (unless (and dir (file-directory-p dir))
                     (user-error "Wiki directory is nil or missing: %s" dir))
@@ -977,7 +1004,10 @@ specify a FILENAME."
     (unless existing-buffer
       (org-multi-wiki--setup-new-buffer buf namespace fpath dir))
     (with-current-buffer buf
-      (org-multi-wiki-run-mode-hooks))
+      (org-multi-wiki-run-mode-hooks)
+      (org-multi-wiki--log-file-visit namespace
+                                      (org-multi-wiki--relative-path
+                                       fpath namespace t)))
     (funcall org-multi-wiki-display-buffer-fn buf)))
 
 (defsubst org-multi-wiki--removal-blocked-p ()
@@ -1033,6 +1063,9 @@ the source file."
             (org-refile nil nil (list heading fpath nil nil))
             (with-current-buffer buf
               (goto-char (point-min)))
+            (org-multi-wiki--log-file-visit namespace
+                                            (org-multi-wiki--relative-path
+                                             fpath namespace t))
             (funcall org-multi-wiki-display-buffer-fn buf))
         (error
          ;; Clean up the created buffer if it has zero length

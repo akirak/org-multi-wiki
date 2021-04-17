@@ -41,6 +41,7 @@
 (require 's)
 (require 'org)
 (require 'ol)
+(require 'frecency)
 
 (declare-function org-ql-select "ext:org-ql-select")
 
@@ -595,6 +596,114 @@ See `org-multi-wiki-visit-entry' for BUF, NAMESPACE, FPATH, and DIR."
       (rename-buffer (funcall org-multi-wiki-buffer-name-fn
                               :namespace namespace :file fpath :dir dir)
                      t))))
+
+;;;; Logging
+
+(defstruct org-multi-wiki-entry-reference
+  "Pointer to a heading in an wiki."
+  namespace file custom-id olp marker)
+
+(defvar org-multi-wiki-file-frecency-data nil
+  "Alist of file frecency data.
+
+Each key in the alist must be a list of a namespace symbol and a file name.")
+
+(defvar org-multi-wiki-entry-frecency-data nil
+  "Alist of entry frecency data.
+
+Each key in the alist must be an instance of `org-multi-wiki-entry-reference'.")
+
+(defvar org-multi-wiki-last-visited-file nil
+  "Reference to the last visited file.
+
+This is used by `org-multi-wiki--log-entry-visit' to reduce
+multiple continuous access to the same file to one.
+
+The value is a list of a namespace symbol and a file name.")
+
+(defun org-multi-wiki-entry-reference-equal-p (a b)
+  "Return non-nil if two objects point to the same entry.
+
+A and B are instances of `org-multi-wiki-entry-reference'."
+  (and (eq (org-multi-wiki-entry-reference-namespace a)
+           (org-multi-wiki-entry-reference-namespace b))
+       (equal (org-multi-wiki-entry-reference-file a)
+              (org-multi-wiki-entry-reference-file b))
+       (or (and (org-multi-wiki-entry-reference-custom-id a)
+                (equal (org-multi-wiki-entry-reference-custom-id a)
+                       (org-multi-wiki-entry-reference-custom-id b)))
+           (equal (-last-item (org-multi-wiki-entry-reference-olp a))
+                  (-last-item (org-multi-wiki-entry-reference-olp b))))))
+
+(defun org-multi-wiki--log-file-visit (namespace file)
+  "Record visit to a file.
+
+NAMESPACE is a symbol, and FILE is a relative file path from the
+namespace root without the file extension."
+  (let* ((key (list namespace file))
+         (cell (assoc key org-multi-wiki-file-frecency-data))
+         (new-cdr (frecency-update (cdr cell))))
+    (if cell
+        (setcdr cell new-cdr)
+      (push (cons key new-cdr) org-multi-wiki-file-frecency-data))
+    nil))
+
+(cl-defun org-multi-wiki--log-entry-visit (namespace file
+                                                     &key custom-id olp marker)
+  "Record visit to an entry.
+
+This also record a visit to the file using
+`org-multi-wiki--log-file-visit'. See the documentation of the
+function for NAMESPACE and FILE.
+
+CUSTOM-ID, OLP, and MARKER should be retrieved from the heading position.
+The custom ID is optional, so you don't have to generate it."
+  (let ((key (list namespace file)))
+    (unless (equal key org-multi-wiki-last-visited-file)
+      (org-multi-wiki--log-file-visit namespace file)
+      (setq org-multi-wiki-last-visited-file key)))
+  (let* ((entry-reference (make-org-multi-wiki-entry-reference
+                           :namespace namespace
+                           :file file
+                           :custom-id custom-id
+                           :olp olp
+                           :marker marker))
+         (cell (assoc entry-reference org-multi-wiki-entry-frecency-data
+                      #'org-multi-wiki-entry-reference-equal-p))
+         (new-cdr (frecency-update (cdr cell))))
+    (when cell
+      (delete cell org-multi-wiki-entry-frecency-data))
+    (push (cons entry-reference new-cdr)
+          org-multi-wiki-entry-frecency-data)
+    nil))
+
+(defun org-multi-wiki--log-marker-visit (marker)
+  "Record visit to an entry at MARKER."
+  (org-with-point-at marker
+    (if-let ((file-info (org-multi-wiki-entry-file-p)))
+        (org-multi-wiki--log-entry-visit (plist-get file-info :namespace)
+                                         (plist-get file-info :basename)
+                                         :custom-id (org-entry-get nil "CUSTOM_ID")
+                                         :olp (-map #'substring-no-properties
+                                                    (org-get-outline-path t))
+                                         :marker marker)
+      (error "Not in wiki"))))
+
+(defun org-multi-wiki-recently-visited-files ()
+  "Return a list of recently visited files in all wikis."
+  (->> org-multi-wiki-file-frecency-data
+       (-map (pcase-lambda (`(,key . ,data))
+               (cons key (frecency-score data))))
+       (-sort (-on #'> #'cdr))
+       (-map #'car)))
+
+(defun org-multi-wiki-recently-visited-entries ()
+  "Return a list of recently visited entries in all wikis."
+  (->> org-multi-wiki-entry-frecency-data
+       (-map (pcase-lambda (`(,key . ,data))
+               (cons key (frecency-score data))))
+       (-sort (-on #'> #'cdr))
+       (-map #'car)))
 
 ;;;; Custom link type
 ;;;###autoload

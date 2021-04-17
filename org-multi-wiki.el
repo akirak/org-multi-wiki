@@ -401,8 +401,8 @@ This functions returns the extension if the file"
 FILE must be an absolute path to the Org file. NAMESPACE must be
 a symbol. If STRIP-EXTENSION is non-nil, the file suffix will be
 removed if it is included in `org-multi-wiki-file-extensions'."
-  (let ((root (file-truename (cdr-get (alist-get namespace
-                                                 org-multi-wiki-namespace-list))))
+  (let ((root (file-truename (car (alist-get namespace
+                                             org-multi-wiki-namespace-list))))
         (truename (file-truename file)))
     (file-relative-name (if strip-extension
                             (org-multi-wiki--strip-org-extension truename)
@@ -479,30 +479,57 @@ explicitly give it as DIR."
     (plist-get plist prop)))
 
 ;;;###autoload
-(cl-defun org-multi-wiki-entry-files (&optional namespace &key as-buffers)
-  "Get a list of Org files in a namespace.
+(cl-defun org-multi-wiki-entry-files (&optional namespaces &key as-buffers sort)
+  "Get a list of Org files in namespaces."
+  (let ((result (->> (cl-etypecase namespaces
+                       (symbol (list (or namespaces org-multi-wiki-current-namespace)))
+                       (list namespaces))
+                     (-map (lambda (namespace)
+                             (org-multi-wiki-entry-files-1 namespace
+                               :as-buffers as-buffers
+                               :frecency sort)))
+                     (-flatten-n 1))))
+    (if sort
+        (pcase-let ((`(,xs ,ys) (-separate (pcase-lambda (`(,score . ,_))
+                                             (and score (> score 0)))
+                                           result)))
+          (-map #'cdr (append (-sort (-on #'> #'car) xs)
+                              ys)))
+      result)))
 
-If NAMESPACE is omitted, the current namespace is used, as in
-`org-multi-wiki-directory'.
-
-If AS-BUFFERS is non-nil, this function returns a list of buffers
-instead of file names."
-  (let* ((namespace (or namespace org-multi-wiki-current-namespace))
-         (dir (org-multi-wiki-directory namespace))
+(cl-defun org-multi-wiki-entry-files-1 (namespace &key as-buffers frecency)
+  "Get a list of Org files in a namespace."
+  (declare (indent 1))
+  (let* ((dir (org-multi-wiki-directory namespace))
          (recursive (org-multi-wiki--plist-get :recursive namespace))
          (files (if recursive
                     (org-multi-wiki--org-files-recursively dir)
                   (directory-files dir t org-multi-wiki-file-regexp))))
-    (if as-buffers
-        (->> files
-             (-map (lambda (file)
-                     (or (find-buffer-visiting file)
-                         (org-multi-wiki--find-file-noselect :namespace namespace
-                                                             :file file
-                                                             :dir dir))))
-             ;; If there is a file which failed to decrypt, it is nil.
-             (delq nil))
-      files)))
+    (cl-flet ((get-frecency
+               (file)
+               (when-let (cell (assoc (list namespace
+                                            (org-multi-wiki--relative-path
+                                             file namespace t))
+                                      org-multi-wiki-file-frecency-data))
+                 (frecency-score (cdr cell)))))
+      (if as-buffers
+          (->> files
+               (-map (lambda (file)
+                       (when-let (buf (or (find-buffer-visiting file)
+                                          (org-multi-wiki--find-file-noselect
+                                           :namespace namespace
+                                           :file file
+                                           :dir dir)))
+                         (if frecency
+                             (cons (get-frecency file) buf)
+                           buf))))
+               ;; If there is a file which failed to decrypt, it is nil.
+               (delq nil))
+        (if frecency
+            (-map (lambda (file)
+                    (cons (get-frecency file) file))
+                  files)
+          files)))))
 
 (cl-defun org-multi-wiki--find-file-noselect (&key file namespace dir)
   "Create a new buffer for an Org file.

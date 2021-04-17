@@ -111,6 +111,13 @@ for an example, which is the default value."
   "Alist of actions used to insert a link to a heading."
   :type 'alist)
 
+(defcustom helm-org-multi-wiki-sort 'file-frecency
+  "Whether (and how) to sort candidates.
+
+Sorting can reduce the performace."
+  :type '(choice (const :tag "Frecency" file-frecency)
+                 (const :tag "Don't sort" nil)))
+
 (defmacro helm-org-multi-wiki-with-namespace-buffers (namespaces &rest progn)
   "Evaluate an expression with namespace buffers.
 
@@ -119,9 +126,10 @@ and evaluate PROGN."
   (declare (indent 1))
   `(progn
      (setq helm-org-multi-wiki-buffers
-           (->> ,namespaces
-                (--map (org-multi-wiki-entry-files it :as-buffers t))
-                (apply #'append)))
+           (org-multi-wiki-entry-files ,namespaces
+                                       :as-buffers t
+                                       :sort
+                                       (eq helm-org-multi-wiki-sort 'file-frecency)))
      ,@progn))
 
 (defsubst helm-org-multi-wiki--create-entry (namespace title)
@@ -355,41 +363,11 @@ and return an S expression query."
    (action :initform (or helm-org-multi-wiki-actions
                          helm-org-ql-actions))))
 
-(defcustom helm-org-multi-wiki-sort-files 'frecency
-  "Whether (and how) to sort file/buffer candidates.
-
-Sorting can reduce the performace."
-  :type '(choice (const :tag "Frecency" frecency)
-                 (const :tag "Don't sort" nil)))
-
-(defun helm-org-multi-wiki-sort-buffers (buffers)
-  "Sort BUFFERS according to `helm-org-multi-wiki-sort-files'."
-  (cl-case helm-org-multi-wiki-sort-files
-    (frecency (let ((files (-map (pcase-lambda (`(,ns ,filename))
-                                   (--map (expand-file-name (concat filename it)
-                                                            (org-multi-wiki-directory ns))
-                                          org-multi-wiki-file-extensions))
-                                 (org-multi-wiki-recently-visited-files)))
-                    result)
-                (catch 'file
-                  (dolist (file-candidates files)
-                    (when-let (buffer (-find (lambda (buffer)
-                                               (let ((filename (buffer-file-name buffer)))
-                                                 (--any (file-equal-p it filename)
-                                                        file-candidates)))
-                                             buffers))
-                      (delete buffer buffers)
-                      (push buffer result)
-                      (throw 'file t))))
-                (append (nreverse result) buffers)))
-    (otherwise buffers)))
-
 (defclass helm-org-multi-wiki-source-buffers (helm-source-sync)
   ((candidates :initform (lambda ()
-                           (->> helm-org-multi-wiki-buffers
-                                (helm-org-multi-wiki-sort-buffers)
-                                (-map (lambda (buf)
-                                        (cons (buffer-name buf) buf))))))
+                           (-map (lambda (buf)
+                                   (cons (buffer-name buf) buf))
+                                 helm-org-multi-wiki-buffers)))
    ;; This does not restore the narrowing state, nor does it allow customization.
    ;; Maybe work on this later?
    (persistent-action :initform (lambda (buf)

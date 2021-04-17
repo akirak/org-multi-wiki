@@ -619,6 +619,25 @@ See `org-multi-wiki-visit-entry' for BUF, NAMESPACE, FPATH, and DIR."
 
 ;;;; Logging
 
+(defconst org-multi-wiki-log-buffer "*org-multi-wiki log*")
+
+(defun org-multi-wiki--log-message (string &rest objects)
+  "Log a message to `org-multi-wiki-log-buffer' with timestamp.
+
+STRING and OBJECTS are passed to `format'."
+  (let ((existing-buffer (get-buffer org-multi-wiki-log-buffer)))
+    (with-current-buffer (or existing-buffer
+                             (generate-new-buffer org-multi-wiki-log-buffer))
+      (if existing-buffer
+          (goto-char (point-max))
+        (delay-mode-hooks (org-mode))
+        (toggle-read-only t))
+      (let ((inhibit-read-only t))
+        (insert (format-time-string (org-time-stamp-format t t) (current-time))
+                " "
+                (apply #'format string objects)
+                "\n")))))
+
 (defstruct org-multi-wiki-entry-reference
   "Pointer to a heading in an wiki."
   namespace file custom-id olp marker)
@@ -666,6 +685,9 @@ namespace root without the file extension."
     (if cell
         (setcdr cell new-cdr)
       (push (cons key new-cdr) org-multi-wiki-file-frecency-data))
+    (org-multi-wiki--log-message "Visiting file %s"
+                                 (org-multi-wiki--make-link namespace file
+                                                            :to-file t))
     nil))
 
 (cl-defun org-multi-wiki--log-entry-visit (namespace file
@@ -696,6 +718,11 @@ The custom ID is optional, so you don't have to generate it."
                  :test #'org-multi-wiki-entry-reference-equal-p))
     (push (cons entry-reference new-cdr)
           org-multi-wiki-entry-frecency-data)
+    (org-multi-wiki--log-message "Visiting entry %s"
+                                 (org-multi-wiki--make-link namespace file
+                                                            :custom-id custom-id
+                                                            :headline (-last-item olp)
+                                                            :level (length olp)))
     nil))
 
 (defun org-multi-wiki--log-marker-visit (marker)
@@ -995,6 +1022,9 @@ specify a FILENAME."
                     (let ((parent (file-name-directory fpath)))
                       (unless (file-directory-p parent)
                         (make-directory parent t)))
+                    (org-multi-wiki--log-message "Creating a new file %s"
+                                                 (org-link-make-string
+                                                  (concat "file:" (abbreviate-file-name fpath))))
                     (with-current-buffer (create-file-buffer fpath)
                       (setq buffer-file-name fpath)
                       (insert (funcall org-multi-wiki-entry-template-fn heading))
@@ -1058,6 +1088,9 @@ the source file."
     (let ((buf (find-file-noselect fpath)))
       (condition-case err
           (progn
+            (org-multi-wiki--log-message "Creating a new file %s"
+                                         (org-link-make-string
+                                          (concat "file:" (abbreviate-file-name fpath))))
             ;; TODO: Apply the template to the new file but don't create an entry in it
             (org-multi-wiki--setup-new-buffer buf namespace fpath directory)
             (org-refile nil nil (list heading fpath nil nil))

@@ -97,6 +97,9 @@ NAMESPACE-LIST should be the value of the namespace list."
                           (or ,@org-multi-wiki-file-extensions)
                           eol)))))
 
+(define-obsolete-variable-alias 'org-multi-wiki-directories
+  'org-multi-wiki-namespace-list "0.3")
+
 (defcustom org-multi-wiki-namespace-list
   nil
   "List of namespace configurations for wikis.
@@ -127,9 +130,6 @@ custom variables for the global setting:
          (setq org-multi-wiki-recentf-regexp
                (org-multi-wiki--recentf-regexp value)))
   :group 'org-multi-wiki)
-
-(define-obsolete-variable-alias 'org-multi-wiki-directories
-  'org-multi-wiki-namespace-list "0.3")
 
 (defcustom org-multi-wiki-default-namespace
   (caar org-multi-wiki-namespace-list)
@@ -260,6 +260,29 @@ user must not muve the subtree at point to another file."
 (defvar org-multi-wiki-gpg-skip-file-list nil)
 (defvar org-multi-wiki-gpg-skip-namespace-list nil)
 (defvar org-multi-wiki-gpg-skip-globally nil)
+
+(defvar org-multi-wiki-file-frecency-data nil
+  "Alist of file frecency data.
+
+Each key in the alist must be a list of a namespace symbol and a file name.")
+
+(defvar org-multi-wiki-entry-frecency-data nil
+  "Alist of entry frecency data.
+
+Each key in the alist must be an instance of `org-multi-wiki-entry-reference'.")
+
+(defvar org-multi-wiki-last-visited-file nil
+  "Reference to the last visited file.
+
+This is used by `org-multi-wiki--log-entry-visit' to reduce
+multiple continuous access to the same file to one.
+
+The value is a list of a namespace symbol and a file name.")
+
+;;;; Structs
+(cl-defstruct org-multi-wiki-entry-reference
+  "Pointer to a heading in an wiki."
+  namespace file custom-id olp marker)
 
 ;;;; Macros
 (defmacro org-multi-wiki--def-option (key)
@@ -480,7 +503,14 @@ explicitly give it as DIR."
 
 ;;;###autoload
 (cl-defun org-multi-wiki-entry-files (&optional namespaces &key as-buffers sort)
-  "Get a list of Org files in namespaces."
+  "Get a list of Org files in namespaces.
+
+NAMESPACES is a list of namespaces. If it is not specified,
+`org-multi-wiki-current-namespace' is used.
+
+If AS-BUFFERS is non-nil, it returns a list of buffers.
+
+If SORT is non-nil, the result will be sorted by frecency."
   (let ((result (->> (cl-etypecase namespaces
                        (symbol (list (or namespaces org-multi-wiki-current-namespace)))
                        (list namespaces))
@@ -498,7 +528,14 @@ explicitly give it as DIR."
       result)))
 
 (cl-defun org-multi-wiki-entry-files-1 (namespace &key as-buffers frecency)
-  "Get a list of Org files in a namespace."
+  "Get a list of Org files in a namespace.
+
+NAMESPACE should be a symbol.
+
+If AS-BUFFERS is non-nil, it returns a list of buffers.
+
+If FRECENCY is non-nil, each item will be a cons cell where car
+is the frecency score of the item."
   (declare (indent 1))
   (let* ((dir (org-multi-wiki-directory namespace))
          (recursive (org-multi-wiki--plist-get :recursive namespace))
@@ -659,34 +696,12 @@ STRING and OBJECTS are passed to `format'."
       (if existing-buffer
           (goto-char (point-max))
         (delay-mode-hooks (org-mode))
-        (toggle-read-only t))
+        (read-only-mode t))
       (let ((inhibit-read-only t))
         (insert (format-time-string (org-time-stamp-format t t) (current-time))
                 " "
                 (apply #'format string objects)
                 "\n")))))
-
-(defstruct org-multi-wiki-entry-reference
-  "Pointer to a heading in an wiki."
-  namespace file custom-id olp marker)
-
-(defvar org-multi-wiki-file-frecency-data nil
-  "Alist of file frecency data.
-
-Each key in the alist must be a list of a namespace symbol and a file name.")
-
-(defvar org-multi-wiki-entry-frecency-data nil
-  "Alist of entry frecency data.
-
-Each key in the alist must be an instance of `org-multi-wiki-entry-reference'.")
-
-(defvar org-multi-wiki-last-visited-file nil
-  "Reference to the last visited file.
-
-This is used by `org-multi-wiki--log-entry-visit' to reduce
-multiple continuous access to the same file to one.
-
-The value is a list of a namespace symbol and a file name.")
 
 (defun org-multi-wiki-entry-reference-equal-p (a b)
   "Return non-nil if two objects point to the same entry.

@@ -111,6 +111,13 @@ for an example, which is the default value."
   "Alist of actions used to insert a link to a heading."
   :type 'alist)
 
+(defcustom helm-org-multi-wiki-sort 'file-frecency
+  "Whether (and how) to sort candidates.
+
+Sorting can reduce the performace."
+  :type '(choice (const :tag "Frecency" file-frecency)
+                 (const :tag "Don't sort" nil)))
+
 (defmacro helm-org-multi-wiki-with-namespace-buffers (namespaces &rest progn)
   "Evaluate an expression with namespace buffers.
 
@@ -119,9 +126,10 @@ and evaluate PROGN."
   (declare (indent 1))
   `(progn
      (setq helm-org-multi-wiki-buffers
-           (->> ,namespaces
-                (--map (org-multi-wiki-entry-files it :as-buffers t))
-                (apply #'append)))
+           (org-multi-wiki-entry-files ,namespaces
+                                       :as-buffers t
+                                       :sort
+                                       (eq helm-org-multi-wiki-sort 'file-frecency)))
      ,@progn))
 
 (defsubst helm-org-multi-wiki--create-entry (namespace title)
@@ -329,8 +337,19 @@ The function should take a plain query of org-ql.el as the argument
 and return an S expression query."
   :type 'function)
 
+(defclass helm-org-multi-wiki-marker-source (helm-source-sync)
+  ((nohighlight :initform t)
+   (coerce :initform (lambda (marker)
+                       (with-current-buffer (marker-buffer marker)
+                         (org-multi-wiki-run-mode-hooks))
+                       (org-multi-wiki--log-marker-visit marker)
+                       marker))
+   (keymap :initform 'helm-org-multi-wiki-map)
+   (action :initform (or helm-org-multi-wiki-actions
+                         helm-org-ql-actions))))
+
 ;; Based on `helm-org-ql-source' from helm-org-ql.el at 0.5-pre.
-(defclass helm-org-multi-wiki-source (helm-source-sync)
+(defclass helm-org-multi-wiki-source (helm-org-multi-wiki-marker-source)
   ((candidates :initform (lambda ()
                            (let* ((query (if (string-empty-p helm-pattern)
                                              helm-org-multi-wiki-default-query
@@ -349,11 +368,44 @@ and return an S expression query."
    (match :initform #'identity)
    (fuzzy-match :initform nil)
    (multimatch :initform nil)
-   (nohighlight :initform t)
-   (volatile :initform t)
-   (keymap :initform 'helm-org-multi-wiki-map)
-   (action :initform (or helm-org-multi-wiki-actions
-                         helm-org-ql-actions))))
+   (volatile :initform t)))
+
+(defcustom helm-org-multi-wiki-recent-heading-limit 5
+  "The number of items to show in the source for recent headings."
+  :type '(choice null number))
+
+(defcustom helm-org-multi-wiki-show-recent-headings nil
+  "Whether to show recent headings in `helm-org-multi-wiki' commands."
+  :type 'boolean)
+
+(defclass helm-org-multi-wiki-recent-source (helm-org-multi-wiki-marker-source)
+  ((candidate-transformer
+    :initform (lambda (items)
+                (if helm-org-multi-wiki-recent-heading-limit
+                    (-take (min helm-org-multi-wiki-recent-heading-limit
+                                (length items))
+                           items)
+                  items)))))
+
+(defun helm-org-multi-wiki-recent-entry-candidates (namespaces)
+  "Return a list of Helm candidates of recent headings from NAMESPACES."
+  (let ((window-width (window-width (helm-window))))
+    (-map (lambda (x)
+            ;; TODO: Use the same candidate format as `helm-org-multi-wiki-source'
+            (let* ((prefix (format "%s:%s:"
+                                   (org-multi-wiki-entry-reference-namespace x)
+                                   (org-multi-wiki-entry-reference-file x)))
+                   (width (- window-width (length prefix)))
+                   (olp (org-multi-wiki-entry-reference-olp x))
+                   (path (-> olp
+                             (org-format-outline-path width nil "")
+                             (org-split-string ""))))
+              (cons (concat prefix
+                            (if helm-org-ql-reverse-paths
+                                (s-join "\\" (nreverse path))
+                              (s-join "/" path)))
+                    (org-multi-wiki-entry-reference-marker x))))
+          (org-multi-wiki-recently-visited-entries namespaces))))
 
 (defclass helm-org-multi-wiki-source-buffers (helm-source-sync)
   ((candidates :initform (lambda ()
@@ -371,6 +423,10 @@ and return an S expression query."
    (coerce :initform (lambda (buf)
                        (with-current-buffer buf
                          (org-multi-wiki-run-mode-hooks))
+                       (let ((file-info (org-multi-wiki-entry-file-p
+                                         (buffer-file-name buf))))
+                         (org-multi-wiki--log-file-visit (plist-get file-info :namespace)
+                                                         (plist-get file-info :basename)))
                        buf))
    (action :initform 'helm-org-multi-wiki-file-actions)))
 
@@ -386,6 +442,7 @@ FIRST is the target namespace of the first action, as in
 
 If ACTION is given, it is used to handle the input. It should be
 a function that takes two arguments: a string and a namespace."
+  (declare (indent 1))
   (helm-build-dummy-source "New entry"
     :keymap helm-org-multi-wiki-dummy-source-map
     :action
@@ -431,17 +488,22 @@ entry is created."
               :buffer "*helm org multi wiki*"
               :sources
               (delq nil
-                    (list (when helm-org-multi-wiki-show-files
+                    (list (when helm-org-multi-wiki-show-recent-headings
+                            (helm-make-source "Recent headings"
+                                'helm-org-multi-wiki-recent-source
+                              :candidates
+                              (helm-org-multi-wiki-recent-entry-candidates namespaces)))
+                          (when helm-org-multi-wiki-show-files
                             (helm-make-source (format "Wiki files in %s" namespace-str)
                                 'helm-org-multi-wiki-source-buffers))
                           (helm-make-source (format "Wiki (%s)" namespace-str)
                               'helm-org-multi-wiki-source)
                           (helm-org-multi-wiki-make-dummy-source
-                           namespaces
-                           :first (or first
-                                      (if (memq default-namespace namespaces)
-                                          default-namespace
-                                        (car namespaces)))))))))))
+                              namespaces
+                            :first (or first
+                                       (if (memq default-namespace namespaces)
+                                           default-namespace
+                                         (car namespaces)))))))))))
 
 ;;;###autoload
 (defun helm-org-multi-wiki-all ()
@@ -479,7 +541,13 @@ entry."
             :input (-let (((&plist :text :uri) (cdr context)))
                      (or text uri))
             :sources
-            (list (when helm-org-multi-wiki-show-files
+            (list (when helm-org-multi-wiki-show-recent-headings
+                    (helm-make-source "Recent headings"
+                        'helm-org-multi-wiki-recent-source
+                      :candidates
+                      (helm-org-multi-wiki-recent-entry-candidates namespaces)
+                      :action #'helm-org-multi-wiki-file-link-insert-action))
+                  (when helm-org-multi-wiki-show-files
                     (helm-make-source (format "Wiki files in %s" namespace-str)
                         'helm-org-multi-wiki-source-buffers
                       :action #'helm-org-multi-wiki-file-link-insert-action))
@@ -487,10 +555,26 @@ entry."
                       'helm-org-multi-wiki-source
                     :action helm-org-multi-wiki-insert-link-actions)
                   (helm-org-multi-wiki-make-dummy-source namespaces
-                                                         :action #'helm-org-multi-wiki--insert-new-entry-link
-                                                         :first (or first
-                                                                    helm-org-multi-wiki-default-namespace
-                                                                    org-multi-wiki-current-namespace)))))))
+                    :action #'helm-org-multi-wiki--insert-new-entry-link
+                    :first (or first
+                               helm-org-multi-wiki-default-namespace
+                               org-multi-wiki-current-namespace)))))))
+
+;;;###autoload
+(cl-defun helm-org-multi-wiki-recent-headings ()
+  "Display a list of recent headings."
+  (interactive)
+  ;; Based on `helm-org-ql--heading' in helm-org-ql.
+  (let ((namespaces (mapcar #'car org-multi-wiki-namespace-list))
+        (helm-org-multi-wiki-recent-heading-limit nil))
+    (helm :prompt helm-org-multi-wiki-prompt
+          :buffer "*helm org multi wiki*"
+          :sources
+          (helm-make-source (format "Recent headings in wiki %s" namespaces)
+              'helm-org-multi-wiki-recent-source
+            :candidates
+            (helm-org-multi-wiki-recent-entry-candidates namespaces)))))
+
 
 (provide 'helm-org-multi-wiki)
 ;;; helm-org-multi-wiki.el ends here

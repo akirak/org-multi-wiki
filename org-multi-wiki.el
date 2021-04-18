@@ -4,7 +4,7 @@
 
 ;; Author: Akira Komamura <akira.komamura@gmail.com>
 ;; Version: 0.5-pre
-;; Package-Requires: ((emacs "26.1") (dash "2.12") (s "1.12") (org-ql "0.5") (org "9.3"))
+;; Package-Requires: ((emacs "27.1") (dash "2.18") (s "1.12") (org "9.4") (frecency "0.1") (org-ql "0.5"))
 ;; Keywords: org outlines files
 ;; URL: https://github.com/akirak/org-multi-wiki
 
@@ -41,6 +41,7 @@
 (require 's)
 (require 'org)
 (require 'ol)
+(require 'frecency)
 
 (declare-function org-ql-select "ext:org-ql-select")
 
@@ -96,6 +97,9 @@ NAMESPACE-LIST should be the value of the namespace list."
                           (or ,@org-multi-wiki-file-extensions)
                           eol)))))
 
+(define-obsolete-variable-alias 'org-multi-wiki-directories
+  'org-multi-wiki-namespace-list "0.3")
+
 (defcustom org-multi-wiki-namespace-list
   nil
   "List of namespace configurations for wikis.
@@ -126,9 +130,6 @@ custom variables for the global setting:
          (setq org-multi-wiki-recentf-regexp
                (org-multi-wiki--recentf-regexp value)))
   :group 'org-multi-wiki)
-
-(define-obsolete-variable-alias 'org-multi-wiki-directories
-  org-multi-wiki-namespace-list "0.3")
 
 (defcustom org-multi-wiki-default-namespace
   (caar org-multi-wiki-namespace-list)
@@ -260,6 +261,29 @@ user must not muve the subtree at point to another file."
 (defvar org-multi-wiki-gpg-skip-namespace-list nil)
 (defvar org-multi-wiki-gpg-skip-globally nil)
 
+(defvar org-multi-wiki-file-frecency-data nil
+  "Alist of file frecency data.
+
+Each key in the alist must be a list of a namespace symbol and a file name.")
+
+(defvar org-multi-wiki-entry-frecency-data nil
+  "Alist of entry frecency data.
+
+Each key in the alist must be an instance of `org-multi-wiki-entry-reference'.")
+
+(defvar org-multi-wiki-last-visited-file nil
+  "Reference to the last visited file.
+
+This is used by `org-multi-wiki--log-entry-visit' to reduce
+multiple continuous access to the same file to one.
+
+The value is a list of a namespace symbol and a file name.")
+
+;;;; Structs
+(cl-defstruct org-multi-wiki-entry-reference
+  "Pointer to a heading in an wiki."
+  namespace file custom-id olp marker)
+
 ;;;; Macros
 (defmacro org-multi-wiki--def-option (key)
   "Define a function to retrieve KEY option."
@@ -388,6 +412,26 @@ variable is run if necessary."
                            (mapcar #'car org-multi-wiki-namespace-list)
                            nil t nil nil org-multi-wiki-current-namespace)))
 
+(defsubst org-multi-wiki--org-extension (file)
+  "Return non-nil if FILE is an Org file name.
+
+This functions returns the extension if the file"
+  (--find (string-suffix-p it file) org-multi-wiki-file-extensions))
+
+(defun org-multi-wiki--relative-path (file namespace &optional strip-extension)
+  "Return the relative path of an Org file from the namespace root.
+
+FILE must be an absolute path to the Org file. NAMESPACE must be
+a symbol. If STRIP-EXTENSION is non-nil, the file suffix will be
+removed if it is included in `org-multi-wiki-file-extensions'."
+  (let ((root (file-truename (car (alist-get namespace
+                                             org-multi-wiki-namespace-list))))
+        (truename (file-truename file)))
+    (file-relative-name (if strip-extension
+                            (org-multi-wiki--strip-org-extension truename)
+                          truename)
+                        root)))
+
 ;;;###autoload
 (defun org-multi-wiki-entry-file-p (&optional file)
   "Check if FILE is a wiki entry.
@@ -458,30 +502,71 @@ explicitly give it as DIR."
     (plist-get plist prop)))
 
 ;;;###autoload
-(cl-defun org-multi-wiki-entry-files (&optional namespace &key as-buffers)
+(cl-defun org-multi-wiki-entry-files (&optional namespaces &key as-buffers sort)
+  "Get a list of Org files in namespaces.
+
+NAMESPACES is a list of namespaces. If it is not specified,
+`org-multi-wiki-current-namespace' is used.
+
+If AS-BUFFERS is non-nil, it returns a list of buffers.
+
+If SORT is non-nil, the result will be sorted by frecency."
+  (let ((result (->> (cl-etypecase namespaces
+                       (symbol (list (or namespaces org-multi-wiki-current-namespace)))
+                       (list namespaces))
+                     (-map (lambda (namespace)
+                             (org-multi-wiki-entry-files-1 namespace
+                               :as-buffers as-buffers
+                               :frecency sort)))
+                     (-flatten-n 1))))
+    (if sort
+        (pcase-let ((`(,xs ,ys) (-separate (pcase-lambda (`(,score . ,_))
+                                             (and score (> score 0)))
+                                           result)))
+          (-map #'cdr (append (-sort (-on #'> #'car) xs)
+                              ys)))
+      result)))
+
+(cl-defun org-multi-wiki-entry-files-1 (namespace &key as-buffers frecency)
   "Get a list of Org files in a namespace.
 
-If NAMESPACE is omitted, the current namespace is used, as in
-`org-multi-wiki-directory'.
+NAMESPACE should be a symbol.
 
-If AS-BUFFERS is non-nil, this function returns a list of buffers
-instead of file names."
-  (let* ((namespace (or namespace org-multi-wiki-current-namespace))
-         (dir (org-multi-wiki-directory namespace))
+If AS-BUFFERS is non-nil, it returns a list of buffers.
+
+If FRECENCY is non-nil, each item will be a cons cell where car
+is the frecency score of the item."
+  (declare (indent 1))
+  (let* ((dir (org-multi-wiki-directory namespace))
          (recursive (org-multi-wiki--plist-get :recursive namespace))
          (files (if recursive
                     (org-multi-wiki--org-files-recursively dir)
                   (directory-files dir t org-multi-wiki-file-regexp))))
-    (if as-buffers
-        (->> files
-             (-map (lambda (file)
-                     (or (find-buffer-visiting file)
-                         (org-multi-wiki--find-file-noselect :namespace namespace
-                                                             :file file
-                                                             :dir dir))))
-             ;; If there is a file which failed to decrypt, it is nil.
-             (delq nil))
-      files)))
+    (cl-flet ((get-frecency
+               (file)
+               (when-let (cell (assoc (list namespace
+                                            (org-multi-wiki--relative-path
+                                             file namespace t))
+                                      org-multi-wiki-file-frecency-data))
+                 (frecency-score (cdr cell)))))
+      (if as-buffers
+          (->> files
+               (-map (lambda (file)
+                       (when-let (buf (or (find-buffer-visiting file)
+                                          (org-multi-wiki--find-file-noselect
+                                           :namespace namespace
+                                           :file file
+                                           :dir dir)))
+                         (if frecency
+                             (cons (get-frecency file) buf)
+                           buf))))
+               ;; If there is a file which failed to decrypt, it is nil.
+               (delq nil))
+        (if frecency
+            (-map (lambda (file)
+                    (cons (get-frecency file) file))
+                  files)
+          files)))))
 
 (cl-defun org-multi-wiki--find-file-noselect (&key file namespace dir)
   "Create a new buffer for an Org file.
@@ -534,6 +619,7 @@ contain the file."
 (defun org-multi-wiki-run-mode-hooks ()
   "Run mode hooks delayed by org-multi-wiki."
   (when org-multi-wiki-mode-hooks-delayed
+    (goto-char (point-min))
     (run-mode-hooks)
     (setq org-multi-wiki-mode-hooks-delayed nil)))
 
@@ -596,6 +682,137 @@ See `org-multi-wiki-visit-entry' for BUF, NAMESPACE, FPATH, and DIR."
                               :namespace namespace :file fpath :dir dir)
                      t))))
 
+;;;; Logging
+
+(defconst org-multi-wiki-log-buffer "*org-multi-wiki log*")
+
+(defun org-multi-wiki--log-message (string &rest objects)
+  "Log a message to `org-multi-wiki-log-buffer' with timestamp.
+
+STRING and OBJECTS are passed to `format'."
+  (let ((existing-buffer (get-buffer org-multi-wiki-log-buffer)))
+    (with-current-buffer (or existing-buffer
+                             (generate-new-buffer org-multi-wiki-log-buffer))
+      (if existing-buffer
+          (goto-char (point-max))
+        (delay-mode-hooks (org-mode))
+        (read-only-mode t))
+      (let ((inhibit-read-only t))
+        (insert (format-time-string (org-time-stamp-format t t) (current-time))
+                " "
+                (apply #'format string objects)
+                "\n")))))
+
+(defun org-multi-wiki-entry-reference-equal-p (a b)
+  "Return non-nil if two objects point to the same entry.
+
+A and B are instances of `org-multi-wiki-entry-reference'."
+  (and (eq (org-multi-wiki-entry-reference-namespace a)
+           (org-multi-wiki-entry-reference-namespace b))
+       (equal (org-multi-wiki-entry-reference-file a)
+              (org-multi-wiki-entry-reference-file b))
+       (or (and (org-multi-wiki-entry-reference-custom-id a)
+                (equal (org-multi-wiki-entry-reference-custom-id a)
+                       (org-multi-wiki-entry-reference-custom-id b)))
+           (equal (-last-item (org-multi-wiki-entry-reference-olp a))
+                  (-last-item (org-multi-wiki-entry-reference-olp b))))))
+
+(defun org-multi-wiki--log-file-visit (namespace file)
+  "Record visit to a file.
+
+NAMESPACE is a symbol, and FILE is a relative file path from the
+namespace root without the file extension."
+  (let* ((key (list namespace file))
+         (cell (assoc key org-multi-wiki-file-frecency-data))
+         (new-cdr (frecency-update (cdr cell))))
+    (if cell
+        (setcdr cell new-cdr)
+      (push (cons key new-cdr) org-multi-wiki-file-frecency-data))
+    (org-multi-wiki--log-message "Visiting file %s"
+                                 (org-multi-wiki--make-link namespace file
+                                                            :to-file t))
+    nil))
+
+(cl-defun org-multi-wiki--log-entry-visit (namespace file
+                                                     &key custom-id olp marker)
+  "Record visit to an entry.
+
+This also record a visit to the file using
+`org-multi-wiki--log-file-visit'. See the documentation of the
+function for NAMESPACE and FILE.
+
+CUSTOM-ID, OLP, and MARKER should be retrieved from the heading position.
+The custom ID is optional, so you don't have to generate it."
+  (let ((key (list namespace file)))
+    (unless (equal key org-multi-wiki-last-visited-file)
+      (org-multi-wiki--log-file-visit namespace file)
+      (setq org-multi-wiki-last-visited-file key)))
+  (let* ((entry-reference (make-org-multi-wiki-entry-reference
+                           :namespace namespace
+                           :file file
+                           :custom-id custom-id
+                           :olp olp
+                           :marker marker))
+         (cell (assoc entry-reference org-multi-wiki-entry-frecency-data
+                      #'org-multi-wiki-entry-reference-equal-p))
+         (new-cdr (frecency-update (cdr cell))))
+    (when cell
+      (cl-delete cell org-multi-wiki-entry-frecency-data
+                 :test #'org-multi-wiki-entry-reference-equal-p))
+    (push (cons entry-reference new-cdr)
+          org-multi-wiki-entry-frecency-data)
+    (org-multi-wiki--log-message "Visiting entry %s"
+                                 (org-multi-wiki--make-link namespace file
+                                                            :custom-id custom-id
+                                                            :headline (-last-item olp)
+                                                            :level (length olp)))
+    nil))
+
+(defun org-multi-wiki--log-marker-visit (marker)
+  "Record visit to an entry at MARKER."
+  (org-with-point-at marker
+    (if-let ((file-info (org-multi-wiki-entry-file-p)))
+        (org-multi-wiki--log-entry-visit (plist-get file-info :namespace)
+                                         (plist-get file-info :basename)
+                                         :custom-id (org-entry-get nil "CUSTOM_ID")
+                                         :olp (-map #'substring-no-properties
+                                                    (org-get-outline-path t))
+                                         :marker marker)
+      (error "Not in wiki"))))
+
+(defun org-multi-wiki-recently-visited-files (&optional namespaces)
+  "Return a list of recently visited files in all wikis.
+
+If NAMESPACES is a list of symbols, returns only items that
+belong to one of them."
+  (->> org-multi-wiki-file-frecency-data
+       (-filter (pcase-lambda (`((,namespace . ,_) . ,_))
+                  (if namespaces
+                      (memq namespace namespaces)
+                    t)))
+       (-map (pcase-lambda (`(,key . ,data))
+               (cons key (frecency-score data))))
+       (-sort (-on #'> #'cdr))
+       (--filter (> (cdr it) 0))
+       (-map #'car)))
+
+(defun org-multi-wiki-recently-visited-entries (&optional namespaces)
+  "Return a list of recently visited entries in all wikis.
+
+If NAMESPACES is a list of symbols, returns only items that
+belong to one of them."
+  (->> org-multi-wiki-entry-frecency-data
+       (-filter (pcase-lambda (`(,x . ,_))
+                  (if namespaces
+                      (memq (org-multi-wiki-entry-reference-namespace x)
+                            namespaces)
+                    t)))
+       (-map (pcase-lambda (`(,key . ,data))
+               (cons key (frecency-score data))))
+       (-sort (-on #'> #'cdr))
+       (--filter (> (cdr it) 0))
+       (-map #'car)))
+
 ;;;; Custom link type
 ;;;###autoload
 (defun org-multi-wiki-follow-link (link)
@@ -644,7 +861,8 @@ See `org-multi-wiki-visit-entry' for BUF, NAMESPACE, FPATH, and DIR."
                                           `(heading ,headline)
                                           :action '(point)))
                               (user-error "Cannot find an entry with heading %s" headline))))))
-        (when pos (goto-char pos))))))
+        (when pos (goto-char pos))
+        (org-multi-wiki--log-marker-visit (point-marker))))))
 
 ;;;###autoload
 (defun org-multi-wiki-store-link ()
@@ -652,6 +870,11 @@ See `org-multi-wiki-visit-entry' for BUF, NAMESPACE, FPATH, and DIR."
   (when-let* ((plist (org-multi-wiki--get-link-data nil))
               (link-brackets (org-link-make-string (plist-get plist :link)
                                                    (plist-get plist :headline))))
+    ;; If the user stores a link to the entry, he/she may want to
+    ;; visit it soon.
+    (save-excursion
+      (ignore-errors (org-back-to-heading))
+      (org-multi-wiki--log-marker-visit (point-marker)))
     (org-link-store-props :type "wiki"
                           ;; :file (plist-get plist :file)
                           ;; :node headline
@@ -736,10 +959,9 @@ ORIGIN-NS, if specified, is the namespace of the link orientation."
 
 (defun org-multi-wiki--strip-org-extension (filename)
   "Strip .org or .org.gpg from FILENAME."
-  (save-match-data
-    (if (string-match (rx (or ".org" ".org.gpg") eos) filename)
-        (substring filename 0 (car (match-data)))
-      filename)))
+  (if-let (extension (org-multi-wiki--org-extension filename))
+      (string-remove-suffix extension filename)
+    filename))
 
 (defun org-multi-wiki-complete-link ()
   "Support for the Org link completion mechanism."
@@ -843,7 +1065,8 @@ specify a FILENAME."
                                                      (org-multi-wiki-link-file-name
                                                       file :namespace namespace)))))
                        :namespace namespace)))
-  (let* ((dir (org-multi-wiki-directory namespace))
+  (let* ((namespace (or namespace org-multi-wiki-current-namespace))
+         (dir (org-multi-wiki-directory namespace))
          (fpath (progn
                   (unless (and dir (file-directory-p dir))
                     (user-error "Wiki directory is nil or missing: %s" dir))
@@ -859,6 +1082,9 @@ specify a FILENAME."
                     (let ((parent (file-name-directory fpath)))
                       (unless (file-directory-p parent)
                         (make-directory parent t)))
+                    (org-multi-wiki--log-message "Creating a new file %s"
+                                                 (org-link-make-string
+                                                  (concat "file:" (abbreviate-file-name fpath))))
                     (with-current-buffer (create-file-buffer fpath)
                       (setq buffer-file-name fpath)
                       (insert (funcall org-multi-wiki-entry-template-fn heading))
@@ -868,7 +1094,10 @@ specify a FILENAME."
     (unless existing-buffer
       (org-multi-wiki--setup-new-buffer buf namespace fpath dir))
     (with-current-buffer buf
-      (org-multi-wiki-run-mode-hooks))
+      (org-multi-wiki-run-mode-hooks)
+      (org-multi-wiki--log-file-visit namespace
+                                      (org-multi-wiki--relative-path
+                                       fpath namespace t)))
     (funcall org-multi-wiki-display-buffer-fn buf)))
 
 (defsubst org-multi-wiki--removal-blocked-p ()
@@ -919,11 +1148,17 @@ the source file."
     (let ((buf (find-file-noselect fpath)))
       (condition-case err
           (progn
+            (org-multi-wiki--log-message "Creating a new file %s"
+                                         (org-link-make-string
+                                          (concat "file:" (abbreviate-file-name fpath))))
             ;; TODO: Apply the template to the new file but don't create an entry in it
             (org-multi-wiki--setup-new-buffer buf namespace fpath directory)
             (org-refile nil nil (list heading fpath nil nil))
             (with-current-buffer buf
               (goto-char (point-min)))
+            (org-multi-wiki--log-file-visit namespace
+                                            (org-multi-wiki--relative-path
+                                             fpath namespace t))
             (funcall org-multi-wiki-display-buffer-fn buf))
         (error
          ;; Clean up the created buffer if it has zero length

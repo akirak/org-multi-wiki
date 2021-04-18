@@ -73,6 +73,16 @@
         (let ((result (template "Hello")))
           (expect result :to-equal "* Hello\n"))))))
 
+(describe "org-multi-wiki--org-extension"
+  (it "returns the extension of an Org file"
+    (expect (org-multi-wiki--org-extension "sample.org")
+            :to-equal ".org")
+    (expect (org-multi-wiki--org-extension "sample.org.gpg")
+            :to-equal ".org.gpg"))
+  (it "returns nil for other files"
+    (expect (org-multi-wiki--org-extension "sample.txt")
+            :to-be nil)))
+
 (describe "org-multi-wiki--strip-org-extension"
   (it "strips .org"
     (expect (org-multi-wiki--strip-org-extension "sample.org")

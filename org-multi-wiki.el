@@ -765,18 +765,33 @@ The custom ID is optional, so you don't have to generate it."
                                          :marker marker)
       (error "Not in wiki"))))
 
-(defun org-multi-wiki-recently-visited-files ()
-  "Return a list of recently visited files in all wikis."
+(defun org-multi-wiki-recently-visited-files (&optional namespaces)
+  "Return a list of recently visited files in all wikis.
+
+If NAMESPACES is a list of symbols, returns only items that
+belong to one of them."
   (->> org-multi-wiki-file-frecency-data
+       (-filter (pcase-lambda (`((,namespace . ,_) . ,_))
+                  (if namespaces
+                      (memq namespace namespaces)
+                    t)))
        (-map (pcase-lambda (`(,key . ,data))
                (cons key (frecency-score data))))
        (-sort (-on #'> #'cdr))
        (--filter (> (cdr it) 0))
        (-map #'car)))
 
-(defun org-multi-wiki-recently-visited-entries ()
-  "Return a list of recently visited entries in all wikis."
+(defun org-multi-wiki-recently-visited-entries (&optional namespaces)
+  "Return a list of recently visited entries in all wikis.
+
+If NAMESPACES is a list of symbols, returns only items that
+belong to one of them."
   (->> org-multi-wiki-entry-frecency-data
+       (-filter (pcase-lambda (`(,x . ,_))
+                  (if namespaces
+                      (memq (org-multi-wiki-entry-reference-namespace x)
+                            namespaces)
+                    t)))
        (-map (pcase-lambda (`(,key . ,data))
                (cons key (frecency-score data))))
        (-sort (-on #'> #'cdr))

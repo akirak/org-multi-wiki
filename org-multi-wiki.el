@@ -582,6 +582,7 @@ contain the file."
 (defun org-multi-wiki-run-mode-hooks ()
   "Run mode hooks delayed by org-multi-wiki."
   (when org-multi-wiki-mode-hooks-delayed
+    (goto-char (point-min))
     (run-mode-hooks)
     (setq org-multi-wiki-mode-hooks-delayed nil)))
 

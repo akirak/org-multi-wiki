@@ -398,6 +398,7 @@ FIRST is the target namespace of the first action, as in
 
 If ACTION is given, it is used to handle the input. It should be
 a function that takes two arguments: a string and a namespace."
+  (declare (indent 1))
   (helm-build-dummy-source "New entry"
     :keymap helm-org-multi-wiki-dummy-source-map
     :action
@@ -499,10 +500,10 @@ entry."
                       'helm-org-multi-wiki-source
                     :action helm-org-multi-wiki-insert-link-actions)
                   (helm-org-multi-wiki-make-dummy-source namespaces
-                                                         :action #'helm-org-multi-wiki--insert-new-entry-link
-                                                         :first (or first
-                                                                    helm-org-multi-wiki-default-namespace
-                                                                    org-multi-wiki-current-namespace)))))))
+                    :action #'helm-org-multi-wiki--insert-new-entry-link
+                    :first (or first
+                               helm-org-multi-wiki-default-namespace
+                               org-multi-wiki-current-namespace)))))))
 
 (provide 'helm-org-multi-wiki)
 ;;; helm-org-multi-wiki.el ends here

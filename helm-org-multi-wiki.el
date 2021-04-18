@@ -560,5 +560,21 @@ entry."
                                helm-org-multi-wiki-default-namespace
                                org-multi-wiki-current-namespace)))))))
 
+;;;###autoload
+(cl-defun helm-org-multi-wiki-recent-headings ()
+  "Display a list of recent headings."
+  (interactive)
+  ;; Based on `helm-org-ql--heading' in helm-org-ql.
+  (let ((namespaces (mapcar #'car org-multi-wiki-namespace-list))
+        (helm-org-multi-wiki-recent-heading-limit nil))
+    (helm :prompt helm-org-multi-wiki-prompt
+          :buffer "*helm org multi wiki*"
+          :sources
+          (helm-make-source (format "Recent headings in wiki %s" namespaces)
+              'helm-org-multi-wiki-recent-source
+            :candidates
+            (helm-org-multi-wiki-recent-entry-candidates namespaces)))))
+
+
 (provide 'helm-org-multi-wiki)
 ;;; helm-org-multi-wiki.el ends here

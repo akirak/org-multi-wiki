@@ -792,8 +792,8 @@ belong to one of them."
                     t)))
        (-map (pcase-lambda (`(,key . ,data))
                (cons key (frecency-score data))))
-       (-sort (-on #'> #'cdr))
        (--filter (> (cdr it) 0))
+       (-sort (-on #'> #'cdr))
        (-map #'car)))
 
 (defun org-multi-wiki-recently-visited-entries (&optional namespaces)
@@ -809,8 +809,8 @@ belong to one of them."
                     t)))
        (-map (pcase-lambda (`(,key . ,data))
                (cons key (frecency-score data))))
-       (-sort (-on #'> #'cdr))
        (--filter (> (cdr it) 0))
+       (-sort (-on #'> #'cdr))
        (-map #'car)))
 
 ;;;; Custom link type

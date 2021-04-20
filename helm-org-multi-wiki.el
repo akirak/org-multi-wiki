@@ -462,6 +462,21 @@ a function that takes two arguments: a string and a namespace."
   "Query (boolean AND): ")
 
 ;;;###autoload
+(defun helm-org-multi-wiki-recent-entry-source (&optional namespaces)
+  "Build a Helm source of `helm-org-multi-wiki-recent-source'.
+
+This function creates a Helm source of
+`helm-org-multi-wiki-recent-source' class.
+
+NAMESPACES should be a list of symbols. If it is omitted, it runs
+on all namespaces."
+  (let ((namespaces (or namespaces (-map #'car org-multi-wiki-namespace-list))))
+    (helm-make-source (format "Recent headings %s" namespaces)
+        'helm-org-multi-wiki-recent-source
+      :candidates
+      (helm-org-multi-wiki-recent-entry-candidates namespaces))))
+
+;;;###autoload
 (cl-defun helm-org-multi-wiki (&optional namespaces &key first)
   "Visit an entry or create a new entry.
 
@@ -489,10 +504,7 @@ entry is created."
               :sources
               (delq nil
                     (list (when helm-org-multi-wiki-show-recent-headings
-                            (helm-make-source "Recent headings"
-                                'helm-org-multi-wiki-recent-source
-                              :candidates
-                              (helm-org-multi-wiki-recent-entry-candidates namespaces)))
+                            (helm-org-multi-wiki-build-recent-headings-source namespaces))
                           (when helm-org-multi-wiki-show-files
                             (helm-make-source (format "Wiki files in %s" namespace-str)
                                 'helm-org-multi-wiki-source-buffers))

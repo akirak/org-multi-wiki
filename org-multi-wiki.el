@@ -682,6 +682,26 @@ See `org-multi-wiki-visit-entry' for BUF, NAMESPACE, FPATH, and DIR."
                               :namespace namespace :file fpath :dir dir)
                      t))))
 
+(cl-defgeneric org-multi-wiki-find-org-marker (x)
+  "Find an Org marker for X.")
+
+(cl-defmethod org-multi-wiki-find-org-marker ((x org-multi-wiki-entry-reference))
+  "Find an Org marker for X."
+  (when-let* ((root (car (alist-get (org-multi-wiki-entry-reference-namespace x)
+                                    org-multi-wiki-namespace-list)))
+              (file (cl-find-if #'file-exists-p
+                                (org-multi-wiki-expand-org-file-names
+                                 root
+                                 (org-multi-wiki-entry-reference-file x)))))
+    (with-current-buffer (or (find-buffer-visiting file)
+                             (find-file-noselect file))
+      (org-with-wide-buffer
+       (goto-char (point-min))
+       (or (when (-some->> (org-multi-wiki-entry-reference-custom-id x)
+                   (org-find-property "CUSTOM_ID"))
+             (point-marker))
+           (org-find-olp (org-multi-wiki-entry-reference-olp x) t))))))
+
 ;;;; Logging
 
 (defconst org-multi-wiki-log-buffer "*org-multi-wiki log*")

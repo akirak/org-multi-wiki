@@ -385,7 +385,18 @@ and return an S expression query."
                     (-take (min helm-org-multi-wiki-recent-heading-limit
                                 (length items))
                            items)
-                  items)))))
+                  items)))
+   (coerce :initform (lambda (x)
+                       (let* ((marker (org-multi-wiki-entry-reference-marker x))
+                              (buffer (marker-buffer marker)))
+                         (unless (and (markerp marker)
+                                      (bufferp buffer)
+                                      (buffer-live-p buffer))
+                           (setq marker (org-multi-wiki-find-org-marker x)))
+                         (with-current-buffer (marker-buffer marker)
+                           (org-multi-wiki-run-mode-hooks))
+                         (org-multi-wiki--log-marker-visit marker)
+                         marker)))))
 
 (defun helm-org-multi-wiki-recent-entry-candidates (namespaces)
   "Return a list of Helm candidates of recent headings from NAMESPACES."
@@ -404,7 +415,7 @@ and return an S expression query."
                             (if helm-org-ql-reverse-paths
                                 (s-join "\\" (nreverse path))
                               (s-join "/" path)))
-                    (org-multi-wiki-entry-reference-marker x))))
+                    x)))
           (org-multi-wiki-recently-visited-entries namespaces))))
 
 (defclass helm-org-multi-wiki-source-buffers (helm-source-sync)

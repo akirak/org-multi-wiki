@@ -756,11 +756,10 @@ The custom ID is optional, so you don't have to generate it."
          (cell (assoc entry-reference org-multi-wiki-entry-frecency-data
                       #'org-multi-wiki-entry-reference-equal-p))
          (new-cdr (frecency-update (cdr cell))))
-    (when cell
-      (cl-delete cell org-multi-wiki-entry-frecency-data
-                 :test #'org-multi-wiki-entry-reference-equal-p))
-    (push (cons entry-reference new-cdr)
-          org-multi-wiki-entry-frecency-data)
+    (if cell
+        (setcdr cell new-cdr)
+      (push (cons entry-reference new-cdr)
+            org-multi-wiki-entry-frecency-data))
     (org-multi-wiki--log-message "Visiting entry %s"
                                  (org-multi-wiki--make-link namespace file
                                                             :custom-id custom-id

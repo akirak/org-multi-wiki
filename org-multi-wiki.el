@@ -870,6 +870,7 @@ belong to one of them."
             (if marker
                 (org-goto-marker-or-bmk marker)
               (org-multi-wiki-visit-entry basename :namespace id)))))
+      (org-multi-wiki-run-mode-hooks)
       (let ((pos (or (and custom-id
                           (or (car-safe (org-ql-select (current-buffer)
                                           `(property "CUSTOM_ID" ,custom-id)

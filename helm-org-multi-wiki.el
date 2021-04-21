@@ -349,7 +349,7 @@ and return an S expression query."
                          helm-org-ql-actions))))
 
 ;; Based on `helm-org-ql-source' from helm-org-ql.el at 0.5-pre.
-(defclass helm-org-multi-wiki-source (helm-org-multi-wiki-marker-source)
+(defclass helm-org-multi-wiki-ql-source (helm-org-multi-wiki-marker-source)
   ((candidates :initform (lambda ()
                            (let* ((query (if (string-empty-p helm-pattern)
                                              helm-org-multi-wiki-default-query
@@ -402,7 +402,7 @@ and return an S expression query."
   "Return a list of Helm candidates of recent headings from NAMESPACES."
   (let ((window-width (window-width (helm-window))))
     (-map (lambda (x)
-            ;; TODO: Use the same candidate format as `helm-org-multi-wiki-source'
+            ;; TODO: Use the same candidate format as `helm-org-multi-wiki-ql-source'
             (let* ((prefix (format "%s:%s:"
                                    (org-multi-wiki-entry-reference-namespace x)
                                    (org-multi-wiki-entry-reference-file x)))
@@ -520,7 +520,7 @@ entry is created."
                             (helm-make-source (format "Wiki files in %s" namespace-str)
                                 'helm-org-multi-wiki-source-buffers))
                           (helm-make-source (format "Wiki (%s)" namespace-str)
-                              'helm-org-multi-wiki-source)
+                              'helm-org-multi-wiki-ql-source)
                           (helm-org-multi-wiki-make-dummy-source
                               namespaces
                             :first (or first
@@ -575,7 +575,7 @@ entry."
                         'helm-org-multi-wiki-source-buffers
                       :action #'helm-org-multi-wiki-file-link-insert-action))
                   (helm-make-source (format "Wiki (%s)" namespace-str)
-                      'helm-org-multi-wiki-source
+                      'helm-org-multi-wiki-ql-source
                     :action helm-org-multi-wiki-insert-link-actions)
                   (helm-org-multi-wiki-make-dummy-source namespaces
                     :action #'helm-org-multi-wiki--insert-new-entry-link

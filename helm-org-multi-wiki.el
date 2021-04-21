@@ -409,8 +409,7 @@ and return an S expression query."
                     (-take (min helm-org-multi-wiki-recent-heading-limit
                                 (length items))
                            items)
-                  items)))
-   (coerce :initform #'helm-org-multi-wiki--coerce-entry-struct)))
+                  items)))))
 
 (defun helm-org-multi-wiki-recent-entry-candidates (namespaces)
   "Return a list of Helm candidates of recent headings from NAMESPACES."
@@ -620,10 +619,7 @@ entry."
                      (or text uri))
             :sources
             (list (when helm-org-multi-wiki-show-recent-headings
-                    (helm-make-source "Recent headings"
-                        'helm-org-multi-wiki-source-recent-entry
-                      :candidates
-                      (helm-org-multi-wiki-recent-entry-candidates namespaces)
+                    (helm-org-multi-wiki-recent-entry-source namespaces
                       :action #'helm-org-multi-wiki-file-link-insert-action))
                   (when helm-org-multi-wiki-show-files
                     (helm-make-source (format "Wiki files in %s" namespace-str)

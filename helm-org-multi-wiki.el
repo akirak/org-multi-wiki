@@ -446,6 +446,15 @@ and return an S expression query."
                                     (plist-get file-info :basename)))
   buffer)
 
+(cl-defmethod helm-org-multi-wiki--coerce-to-buffer ((x list))
+  "Coerce X to a buffer. Do preprocessing for an action as needed."
+  (if-let* ((file (org-multi-wiki--find-exiting-file (nth 0 x)
+                                                     (nth 1 x)))
+            (buffer (or (find-buffer-visiting file)
+                        (find-file-noselect file))))
+      (helm-org-multi-wiki--coerce-to-buffer buffer)
+    (error "Unable to find an Org file or buffer matching %s" x)))
+
 (defclass helm-org-multi-wiki-source-buffers (helm-source-sync)
   ((candidates :initform (lambda ()
                            (-map (lambda (buf)
@@ -461,6 +470,14 @@ and return an S expression query."
                                     (org-show-entry))))
    (coerce :initform #'helm-org-multi-wiki--coerce-to-buffer)
    (action :initform 'helm-org-multi-wiki-file-actions)))
+
+(defun helm-org-multi-wiki-recent-file-candidates (namespaces)
+  "Return a list of Helm candidates of recent files from NAMESPACES."
+  (-map (lambda (x)
+          ;; TOOD: Use `org-multi-wiki-buffer-name-fn'
+          (cons (format "%s:%s" (nth 0 x) (nth 1 x))
+                x))
+        (org-multi-wiki-recently-visited-files namespaces)))
 
 (cl-defun helm-org-multi-wiki-make-dummy-source (namespaces &key
                                                             first
@@ -507,6 +524,18 @@ on all namespaces."
         'helm-org-multi-wiki-source-recent-entry
       :candidates
       (helm-org-multi-wiki-recent-entry-candidates namespaces))))
+
+;;;###autoload
+(defun helm-org-multi-wiki-recent-file-source (&optional namespaces)
+  "Build a Helm source for recent files.
+
+NAMESPACES should be a list of symbols. If it is omitted, it runs
+on all namespaces."
+  (let ((namespaces (or namespaces (-map #'car org-multi-wiki-namespace-list))))
+    (helm-make-source (format "Recent files %s" namespaces)
+        'helm-org-multi-wiki-source-buffers
+      :candidates
+      `(lambda () (helm-org-multi-wiki-recent-file-candidates (quote ,namespaces))))))
 
 ;;;###autoload
 (cl-defun helm-org-multi-wiki (&optional namespaces &key first)

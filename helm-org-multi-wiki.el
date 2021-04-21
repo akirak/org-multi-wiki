@@ -359,7 +359,7 @@ and return an S expression query."
 
 (defclass helm-org-multi-wiki-marker-source (helm-source-sync)
   ((nohighlight :initform t)
-   (coerce :initform #'helm-org-multi-wiki--coerce-entry-marker)
+   (coerce :initform #'helm-org-multi-wiki--coerce-to-marker)
    (keymap :initform 'helm-org-multi-wiki-map)
    (action :initform (or helm-org-multi-wiki-actions
                          helm-org-ql-actions))))
@@ -565,7 +565,7 @@ entry is created."
               :sources
               (delq nil
                     (list (when helm-org-multi-wiki-show-recent-headings
-                            (helm-org-multi-wiki-build-recent-headings-source namespaces))
+                            (helm-org-multi-wiki-recent-entry-source namespaces))
                           (when helm-org-multi-wiki-show-files
                             (helm-make-source (format "Wiki files in %s" namespace-str)
                                 'helm-org-multi-wiki-source-buffers))

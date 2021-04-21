@@ -43,6 +43,7 @@
 (defvar helm-input-idle-delay)
 (defvar helm-org-ql-input-idle-delay)
 (defvar helm-org-ql-map)
+(defvar helm-org-ql-actions)
 
 (defgroup helm-org-multi-wiki nil
   "Helm interface to org-multi-wiki."
@@ -310,11 +311,10 @@ PROMPT and ACTION are passed to helm."
 (defvar helm-org-multi-wiki-map
   (make-composed-keymap nil helm-org-ql-map))
 
-(defcustom helm-org-multi-wiki-actions nil
+(defcustom helm-org-multi-wiki-actions helm-org-ql-actions
   "Alist of actions in `helm-org-multi-wiki'.
 
-This can be nil.  In that case, `helm-org-ql-actions' will be
-inherited."
+By default, this is the same value as `helm-org-ql-actions'."
   :type 'alist)
 
 (defcustom helm-org-multi-wiki-file-actions
@@ -361,8 +361,7 @@ and return an S expression query."
   ((nohighlight :initform t)
    (coerce :initform #'helm-org-multi-wiki--coerce-to-marker)
    (keymap :initform 'helm-org-multi-wiki-map)
-   (action :initform (or helm-org-multi-wiki-actions
-                         helm-org-ql-actions))))
+   (action :initform 'helm-org-multi-wiki-actions)))
 
 (defclass helm-org-multi-wiki-source-recent-entry (helm-org-multi-wiki-marker-source)
   ((candidate-transformer
@@ -511,19 +510,25 @@ a function that takes two arguments: a string and a namespace."
   "Query (boolean AND): ")
 
 ;;;###autoload
-(defun helm-org-multi-wiki-recent-entry-source (&optional namespaces)
+(cl-defun helm-org-multi-wiki-recent-entry-source (&optional namespaces
+                                                             &key action)
   "Build a Helm source of `helm-org-multi-wiki-source-recent-entry'.
 
 This function creates a Helm source of
 `helm-org-multi-wiki-source-recent-entry' class.
 
 NAMESPACES should be a list of symbols. If it is omitted, it runs
-on all namespaces."
+on all namespaces.
+
+ACTION is an alist of Helm actions. If it is omitted, it defaults
+to `helm-org-multi-wiki-actions'."
+  (declare (indent 1))
   (let ((namespaces (or namespaces (-map #'car org-multi-wiki-namespace-list))))
     (helm-make-source (format "Recent headings %s" namespaces)
         'helm-org-multi-wiki-source-recent-entry
       :candidates
-      (helm-org-multi-wiki-recent-entry-candidates namespaces))))
+      (helm-org-multi-wiki-recent-entry-candidates namespaces)
+      :action (or action helm-org-multi-wiki-actions))))
 
 ;;;###autoload
 (defun helm-org-multi-wiki-recent-file-source (&optional namespaces)

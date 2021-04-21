@@ -437,7 +437,7 @@ and return an S expression query."
   "Coerce X to a buffer. Do preprocessing for an action as needed.")
 
 (cl-defmethod helm-org-multi-wiki--coerce-to-buffer ((buffer buffer))
-  "Preprocess the buffer for running an action on MARKER and log the visit."
+  "Preprocess the buffer for running an action on BUFFER and log the visit."
   (with-current-buffer buffer
     (org-multi-wiki-run-mode-hooks))
   (let ((file-info (org-multi-wiki-entry-file-p

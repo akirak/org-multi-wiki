@@ -682,17 +682,25 @@ See `org-multi-wiki-visit-entry' for BUF, NAMESPACE, FPATH, and DIR."
                               :namespace namespace :file fpath :dir dir)
                      t))))
 
+(defun org-multi-wiki--find-exiting-file (namespace basename)
+  "Find an Org file with a particular basename in a particular namespace.
+
+NAMESPACE is the namespace the file belongs to, and BASENAME is
+the name of the file without a suffix which is usually .org or
+.org.gpg."
+  (if-let (root (car (alist-get namespace org-multi-wiki-namespace-list)))
+      (cl-find-if #'file-exists-p
+                  (org-multi-wiki-expand-org-file-names root basename))
+    (error "There is no namespace named %s" namespace)))
+
 (cl-defgeneric org-multi-wiki-find-org-marker (x)
   "Find an Org marker for X.")
 
 (cl-defmethod org-multi-wiki-find-org-marker ((x org-multi-wiki-entry-reference))
   "Find an Org marker for X."
-  (when-let* ((root (car (alist-get (org-multi-wiki-entry-reference-namespace x)
-                                    org-multi-wiki-namespace-list)))
-              (file (cl-find-if #'file-exists-p
-                                (org-multi-wiki-expand-org-file-names
-                                 root
-                                 (org-multi-wiki-entry-reference-file x)))))
+  (when-let (file (org-multi-wiki--find-exiting-file
+                   (org-multi-wiki-entry-reference-namespace x)
+                   (org-multi-wiki-entry-reference-file x)))
     (with-current-buffer (or (find-buffer-visiting file)
                              (find-file-noselect file))
       (org-with-wide-buffer

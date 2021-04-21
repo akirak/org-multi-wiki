@@ -378,7 +378,7 @@ and return an S expression query."
   "Whether to show recent headings in `helm-org-multi-wiki' commands."
   :type 'boolean)
 
-(defclass helm-org-multi-wiki-recent-source (helm-org-multi-wiki-marker-source)
+(defclass helm-org-multi-wiki-source-recent-entry (helm-org-multi-wiki-marker-source)
   ((candidate-transformer
     :initform (lambda (items)
                 (if helm-org-multi-wiki-recent-heading-limit
@@ -474,16 +474,16 @@ a function that takes two arguments: a string and a namespace."
 
 ;;;###autoload
 (defun helm-org-multi-wiki-recent-entry-source (&optional namespaces)
-  "Build a Helm source of `helm-org-multi-wiki-recent-source'.
+  "Build a Helm source of `helm-org-multi-wiki-source-recent-entry'.
 
 This function creates a Helm source of
-`helm-org-multi-wiki-recent-source' class.
+`helm-org-multi-wiki-source-recent-entry' class.
 
 NAMESPACES should be a list of symbols. If it is omitted, it runs
 on all namespaces."
   (let ((namespaces (or namespaces (-map #'car org-multi-wiki-namespace-list))))
     (helm-make-source (format "Recent headings %s" namespaces)
-        'helm-org-multi-wiki-recent-source
+        'helm-org-multi-wiki-source-recent-entry
       :candidates
       (helm-org-multi-wiki-recent-entry-candidates namespaces))))
 
@@ -566,7 +566,7 @@ entry."
             :sources
             (list (when helm-org-multi-wiki-show-recent-headings
                     (helm-make-source "Recent headings"
-                        'helm-org-multi-wiki-recent-source
+                        'helm-org-multi-wiki-source-recent-entry
                       :candidates
                       (helm-org-multi-wiki-recent-entry-candidates namespaces)
                       :action #'helm-org-multi-wiki-file-link-insert-action))
@@ -594,7 +594,7 @@ entry."
           :buffer "*helm org multi wiki*"
           :sources
           (helm-make-source (format "Recent headings in wiki %s" namespaces)
-              'helm-org-multi-wiki-recent-source
+              'helm-org-multi-wiki-source-recent-entry
             :candidates
             (helm-org-multi-wiki-recent-entry-candidates namespaces)))))
 

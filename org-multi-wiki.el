@@ -48,7 +48,7 @@
 (defvar recentf-exclude)
 
 (defgroup org-multi-wiki nil
-  "Multiple wikis based on org-mode."
+  "A knowledge base system based on Org."
   :group 'org)
 
 ;;;;  Custom variables

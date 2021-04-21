@@ -46,7 +46,7 @@
 (defvar helm-org-ql-actions)
 
 (defgroup helm-org-multi-wiki nil
-  "Helm interface to org-multi-wiki."
+  "Helm interface to Org Multi Wiki."
   :group 'org-multi-wiki
   :group 'helm)
 

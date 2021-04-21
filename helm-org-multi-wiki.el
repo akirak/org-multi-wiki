@@ -337,16 +337,41 @@ The function should take a plain query of org-ql.el as the argument
 and return an S expression query."
   :type 'function)
 
+(cl-defgeneric helm-org-multi-wiki--coerce-to-marker (x)
+  "Coerce X to a marker. Do preprocessing for an action as needed.")
+
+(cl-defmethod helm-org-multi-wiki--coerce-to-marker ((marker marker))
+  "Preprocess the buffer for running an action on MARKER and log the visit."
+  (with-current-buffer (marker-buffer marker)
+    (org-multi-wiki-run-mode-hooks))
+  (org-multi-wiki--log-marker-visit marker)
+  marker)
+
+(cl-defmethod helm-org-multi-wiki--coerce-to-marker ((x org-multi-wiki-entry-reference))
+  "Coerce X to a marker. Do preprocessing for an action as needed."
+  (let* ((marker (org-multi-wiki-entry-reference-marker x))
+         (buffer (marker-buffer marker)))
+    (if (and (markerp marker)
+             (bufferp buffer)
+             (buffer-live-p buffer))
+        (helm-org-multi-wiki--coerce-to-marker marker)
+      (helm-org-multi-wiki--coerce-to-marker (org-multi-wiki-find-org-marker x)))))
+
 (defclass helm-org-multi-wiki-marker-source (helm-source-sync)
   ((nohighlight :initform t)
-   (coerce :initform (lambda (marker)
-                       (with-current-buffer (marker-buffer marker)
-                         (org-multi-wiki-run-mode-hooks))
-                       (org-multi-wiki--log-marker-visit marker)
-                       marker))
+   (coerce :initform #'helm-org-multi-wiki--coerce-entry-marker)
    (keymap :initform 'helm-org-multi-wiki-map)
    (action :initform (or helm-org-multi-wiki-actions
                          helm-org-ql-actions))))
+
+(defclass helm-org-multi-wiki-source-recent-entry (helm-org-multi-wiki-marker-source)
+  ((candidate-transformer
+    :initform (lambda (items)
+                (if helm-org-multi-wiki-recent-heading-limit
+                    (-take (min helm-org-multi-wiki-recent-heading-limit
+                                (length items))
+                           items)
+                  items)))))
 
 ;; Based on `helm-org-ql-source' from helm-org-ql.el at 0.5-pre.
 (defclass helm-org-multi-wiki-ql-source (helm-org-multi-wiki-marker-source)
@@ -386,17 +411,7 @@ and return an S expression query."
                                 (length items))
                            items)
                   items)))
-   (coerce :initform (lambda (x)
-                       (let* ((marker (org-multi-wiki-entry-reference-marker x))
-                              (buffer (marker-buffer marker)))
-                         (unless (and (markerp marker)
-                                      (bufferp buffer)
-                                      (buffer-live-p buffer))
-                           (setq marker (org-multi-wiki-find-org-marker x)))
-                         (with-current-buffer (marker-buffer marker)
-                           (org-multi-wiki-run-mode-hooks))
-                         (org-multi-wiki--log-marker-visit marker)
-                         marker)))))
+   (coerce :initform #'helm-org-multi-wiki--coerce-entry-struct)))
 
 (defun helm-org-multi-wiki-recent-entry-candidates (namespaces)
   "Return a list of Helm candidates of recent headings from NAMESPACES."
@@ -418,6 +433,19 @@ and return an S expression query."
                     x)))
           (org-multi-wiki-recently-visited-entries namespaces))))
 
+(cl-defgeneric helm-org-multi-wiki--coerce-to-buffer (x)
+  "Coerce X to a buffer. Do preprocessing for an action as needed.")
+
+(cl-defmethod helm-org-multi-wiki--coerce-to-buffer ((buffer buffer))
+  "Preprocess the buffer for running an action on MARKER and log the visit."
+  (with-current-buffer buffer
+    (org-multi-wiki-run-mode-hooks))
+  (let ((file-info (org-multi-wiki-entry-file-p
+                    (buffer-file-name buffer))))
+    (org-multi-wiki--log-file-visit (plist-get file-info :namespace)
+                                    (plist-get file-info :basename)))
+  buffer)
+
 (defclass helm-org-multi-wiki-source-buffers (helm-source-sync)
   ((candidates :initform (lambda ()
                            (-map (lambda (buf)
@@ -431,14 +459,7 @@ and return an S expression query."
                                   (goto-char (point-min))
                                   (when (re-search-forward org-heading-regexp nil t)
                                     (org-show-entry))))
-   (coerce :initform (lambda (buf)
-                       (with-current-buffer buf
-                         (org-multi-wiki-run-mode-hooks))
-                       (let ((file-info (org-multi-wiki-entry-file-p
-                                         (buffer-file-name buf))))
-                         (org-multi-wiki--log-file-visit (plist-get file-info :namespace)
-                                                         (plist-get file-info :basename)))
-                       buf))
+   (coerce :initform #'helm-org-multi-wiki--coerce-to-buffer)
    (action :initform 'helm-org-multi-wiki-file-actions)))
 
 (cl-defun helm-org-multi-wiki-make-dummy-source (namespaces &key

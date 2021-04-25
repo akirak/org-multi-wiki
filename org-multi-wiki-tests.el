@@ -95,3 +95,23 @@
             :to-equal "sample.txt")
     (expect (org-multi-wiki--strip-org-extension "hello.org.nonorg")
             :to-equal "hello.org.nonorg")))
+
+(describe "org-multi-wiki--extra-files"
+  (it "returns a flat list of file names"
+    ;; Note that I am going to remove notes.org in the future, so I
+    ;; will have to update this test case as well then.
+    (expect (let ((org-directory ".")
+                  (org-agenda-files (list "."))
+                  (org-multi-wiki-extra-files
+                   '("."
+                     "NON-EXISTENT-FILE"
+                     "NON-EXISTENT-DIR/"
+                     org-directory
+                     org-agenda-files)))
+              (org-multi-wiki--extra-files))
+            :to-equal
+            (->> (-map (lambda (f)
+                         (expand-file-name f default-directory))
+                       '("README.org" "notes.org"))
+                 (-repeat 3)
+                 (-flatten-n 1)))))

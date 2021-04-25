@@ -402,6 +402,13 @@ and return an S expression query."
   "Whether to show recent headings in `helm-org-multi-wiki' commands."
   :type 'boolean)
 
+(defcustom helm-org-multi-wiki-show-extra-files t
+  "Whether to append a source for `org-multi-wiki-extra-files'.
+
+If this variable is non-nil, `helm-org-multi-wiki-all' will get a
+`helm-org-ql' source for `org-multi-wiki-extra-files'."
+  :type 'boolean)
+
 (defclass helm-org-multi-wiki-source-recent-entry (helm-org-multi-wiki-marker-source)
   ((candidate-transformer
     :initform (lambda (items)
@@ -542,14 +549,17 @@ on all namespaces."
       `(lambda () (helm-org-multi-wiki-recent-file-candidates (quote ,namespaces))))))
 
 ;;;###autoload
-(cl-defun helm-org-multi-wiki (&optional namespaces &key first)
+(cl-defun helm-org-multi-wiki (&optional namespaces &key first extra-sources)
   "Visit an entry or create a new entry.
 
 NAMESPACES are are a list of namespaces.
 It can be a list of symbols or a symbol.
 
 If FIRST is given, it will be the default namespace in which an
-entry is created."
+entry is created.
+
+If EXTRA-SOURCES is a non-nil list of Helm sources, the sources
+will be inserted before the dummy source."
   (interactive (list current-prefix-arg))
   ;; Based on the implementation of helm-org-ql.
   (if (equal namespaces '(4))
@@ -567,20 +577,20 @@ entry is created."
         (helm :prompt helm-org-multi-wiki-prompt
               :buffer "*helm org multi wiki*"
               :sources
-              (delq nil
-                    (list (when helm-org-multi-wiki-show-recent-headings
-                            (helm-org-multi-wiki-recent-entry-source namespaces))
-                          (when helm-org-multi-wiki-show-files
-                            (helm-make-source (format "Wiki files in %s" namespace-str)
-                                'helm-org-multi-wiki-source-buffers))
-                          (helm-make-source (format "Wiki (%s)" namespace-str)
-                              'helm-org-multi-wiki-ql-source)
-                          (helm-org-multi-wiki-make-dummy-source
-                              namespaces
-                            :first (or first
-                                       (if (memq default-namespace namespaces)
-                                           default-namespace
-                                         (car namespaces)))))))))))
+              `(,@(when helm-org-multi-wiki-show-recent-headings
+                    (list (helm-org-multi-wiki-recent-entry-source namespaces)))
+                ,@(when helm-org-multi-wiki-show-files
+                    (list (helm-make-source (format "Wiki files in %s" namespace-str)
+                              'helm-org-multi-wiki-source-buffers)))
+                ,(helm-make-source (format "Wiki (%s)" namespace-str)
+                     'helm-org-multi-wiki-ql-source)
+                ,@extra-sources
+                ,(helm-org-multi-wiki-make-dummy-source
+                     namespaces
+                   :first (or first
+                              (if (memq default-namespace namespaces)
+                                  default-namespace
+                                (car namespaces))))))))))
 
 ;;;###autoload
 (defun helm-org-multi-wiki-all ()
@@ -588,7 +598,12 @@ entry is created."
   (interactive)
   (helm-org-multi-wiki (mapcar #'car org-multi-wiki-namespace-list)
                        :first (or helm-org-multi-wiki-default-namespace
-                                  org-multi-wiki-current-namespace)))
+                                  org-multi-wiki-current-namespace)
+                       :extra-sources
+                       (when helm-org-multi-wiki-show-extra-files
+                         (list (helm-org-ql-source
+                                (org-multi-wiki--extra-files)
+                                :name "Extra files (org-multi-wiki-extra-files)")))))
 
 ;;;###autoload
 (cl-defun helm-org-multi-wiki-insert-link (&key first)

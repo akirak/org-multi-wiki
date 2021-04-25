@@ -251,6 +251,36 @@ user must not muve the subtree at point to another file."
   :type '(repeat function)
   :group 'org-multi-wiki)
 
+(defcustom org-multi-wiki-extra-files nil
+  "List of extra Org files.
+
+These are files where backlinks are searched for. It is also used
+as an additional source in some functions in
+`helm-org-multi-wiki' package if you have configured to make it
+do so.
+
+Each item can be a file name, a directory name ending with \"/\",
+an anonymous function, a symbol to a function, or a symbol to a
+variable. You can include functions that takes no argument and
+returns a list of file names (but not a directory). The value of
+the variable can be a list of file names, a file, a directory
+name, or nil.
+
+If you specify a directory as an item, `org-agenda-file-regexp'
+is used to find Org files in the directory.
+
+If you specify a non-existing file or directory as an item, it is
+ignored.
+
+Because a proper file name comparison requires file system access
+and hence is inefficient,  you should avoid duplicates in this list.
+If you specify multiple sources that possibly return the same files,
+some functions in this package may return duplicates."
+  :type '(repeat (choice file
+                         symbol
+                         function))
+  :group 'org-multi-wiki)
+
 ;;;; Other variables
 (defvar org-multi-wiki-current-namespace org-multi-wiki-default-namespace)
 
@@ -646,6 +676,35 @@ and DIR is the root directory of the namespace."
   (-map (lambda (extension)
           (expand-file-name (concat basename extension) directory))
         org-multi-wiki-file-extensions))
+
+(defun org-multi-wiki--extra-files ()
+  "Expand entries `org-multi-wiki-extra-files'.
+
+This function returns a list of file names."
+  (cl-flet*
+      ((expand-path
+        (s)
+        (cond
+         ((file-directory-p s)
+          (directory-files s t org-agenda-file-regexp))
+         ((file-exists-p s)
+          (list s))))
+       (expand-paths
+        (y)
+        (if (stringp y)
+            (expand-path y)
+          (-flatten-n 1 (-map #'expand-path y)))))
+    (->> org-multi-wiki-extra-files
+         (-map (lambda (x)
+                 (cl-etypecase x
+                   (string (expand-path x))
+                   (null nil)
+                   (symbol (if (fboundp x)
+                               (funcall x)
+                             (expand-paths (symbol-value x))))
+                   (function (funcall x)))))
+         (-flatten-n 1)
+         (-non-nil))))
 
 (cl-defun org-multi-wiki-link-file-name (file &key namespace dir)
   "Return a file name in an Org link.

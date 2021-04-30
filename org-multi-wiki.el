@@ -281,6 +281,11 @@ some functions in this package may return duplicates."
                          function))
   :group 'org-multi-wiki)
 
+(defcustom org-multi-wiki-prefix-link-text t
+  "Whether to prefix the link text with the top-level heading."
+  :type 'boolean
+  :group 'org-multi-wiki)
+
 ;;;; Other variables
 (defvar org-multi-wiki-current-namespace org-multi-wiki-default-namespace)
 
@@ -1037,12 +1042,22 @@ ORIGIN-NS, if specified, is the namespace of the link orientation."
                                     (when custom-id
                                       (org-entry-put nil "CUSTOM_ID" custom-id)
                                       custom-id)))))
+              (headline-prefix (when (and org-multi-wiki-prefix-link-text
+                                          (> (org-outline-level) 1))
+                                 (save-excursion
+                                   (org-back-to-heading)
+                                   (while (> (org-outline-level) 1)
+                                     (re-search-backward org-heading-regexp))
+                                   (cocnat (org-link-display-format
+                                            (org-get-heading t t t t))
+                                           "#"))))
               (clean-headline (org-link-display-format headline)))
         (list :link (org-multi-wiki--make-link (plist-get plist :namespace)
                                                (plist-get plist :basename)
                                                :origin-ns origin-ns
                                                :custom-id custom-id
-                                               :headline clean-headline
+                                               :headline (concat (or headline-prefix "")
+                                                                 clean-headline)
                                                :level level)
               :headline clean-headline)))))
 

@@ -151,7 +151,7 @@ This should be the first element of one of the entries in
            (delq #'org-multi-wiki-recentf-file-p recentf-exclude))))
 
 (defcustom org-multi-wiki-escape-file-name-fn
-  #'org-multi-wiki-escape-file-name-camelcase-1
+  #'org-multi-wiki-escape-file-name-camelcase-2
   "Function used to generated an escaped file name from a heading."
   :type 'function
   :group 'org-multi-wiki)
@@ -351,6 +351,22 @@ The value is a list of a namespace symbol and a file name.")
                      (-map #'filename-escape)
                      (-map #'upcase-initials)
                      (string-join)))))))
+
+(defun org-multi-wiki-escape-file-name-camelcase-2 (heading)
+  "Escape HEADING suitable for use in file name.
+
+This is based on `org-multi-wiki-escape-file-name-camelcase-1'
+but takes a special care of acronyms. If the string ends with
+\"(WORD)\" where WORD consists of upper-case characters, the
+resulting file name will end with \"_WORD\"."
+  (save-match-data
+    (if (let ((case-fold-search nil))
+          (string-match (rx bos (group (+? anything)) (+ space)
+                            "(" (group (+ (any upper))) ")" eos)
+                        heading))
+        (concat (org-multi-wiki-escape-file-name-camelcase-1 (match-string 1 heading))
+                "_" (match-string 2 heading))
+      (org-multi-wiki-escape-file-name-camelcase-1 heading))))
 
 (defun org-multi-wiki--meaningful-word-p (word)
   "Check if WORD is a meaningful word.

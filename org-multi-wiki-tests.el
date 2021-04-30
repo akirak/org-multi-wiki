@@ -49,6 +49,17 @@
         (let ((result (escape-fn "hello/john connor")))
           (expect result :to-equal "hello/JohnConnor")))))
 
+  (describe "org-multi-wiki-escape-file-name-camelcase-2"
+    (cl-flet ((escape-fn (heading) (org-multi-wiki-escape-file-name-camelcase-2 heading)))
+
+      (it "appends an acronym when the final word is wrapped in parentheses"
+        (let ((result (escape-fn "Time And Relative Dimension In Space (TARDIS)")))
+          (expect result :to-equal "TimeAndRelativeDimensionInSpace_TARDIS")))
+
+      (it "returns a string without underscore otherwise"
+        (let ((result (escape-fn "Time And Relative Dimension In Space")))
+          (expect result :to-equal "TimeAndRelativeDimensionInSpace")))))
+
   (describe "org-multi-wiki-default-custom-id-escape-fn"
     (cl-flet ((escape-fn (heading) (org-multi-wiki-default-custom-id-escape-fn heading)))
 

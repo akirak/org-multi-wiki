@@ -342,20 +342,21 @@ The value is a list of a namespace symbol and a file name.")
   (cl-labels ((filename-escape
                (str)
                (s-replace-regexp (rx (not (any alnum "-._" nonascii))) "" str)))
-    (-let* (((_ dir name) (s-match (rx bol
-                                       (group (* (*? anything) "/"))
-                                       (group (+ anything))
-                                       eol)
-                                   heading))
-            (words (split-string name (rx (any space)))))
-      (concat dir
-              (if (= 1 (length words))
-                  (filename-escape (car words))
-                (->> words
-                     (-filter #'org-multi-wiki--meaningful-word-p)
-                     (-map #'filename-escape)
-                     (-map #'upcase-initials)
-                     (string-join)))))))
+    (save-match-data
+      (-let* (((_ dir name) (s-match (rx bol
+                                         (group (* (*? anything) "/"))
+                                         (group (+ anything))
+                                         eol)
+                                     heading))
+              (words (split-string name (rx (any space)))))
+        (concat dir
+                (if (= 1 (length words))
+                    (filename-escape (car words))
+                  (->> words
+                       (-filter #'org-multi-wiki--meaningful-word-p)
+                       (-map #'filename-escape)
+                       (-map #'upcase-initials)
+                       (string-join))))))))
 
 (defun org-multi-wiki-escape-file-name-camelcase-2 (heading)
   "Escape HEADING suitable for use in file name.

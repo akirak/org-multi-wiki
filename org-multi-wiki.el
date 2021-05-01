@@ -1165,14 +1165,28 @@ ORIGIN-NS, if specified, is the namespace of the link orientation."
 ;;;###autoload
 (cl-defun org-multi-wiki-visit-entry (heading &key
                                               namespace
-                                              filename)
+                                              filename
+                                              no-log
+                                              log-creation
+                                              no-display)
   "Visit an entry of the heading.
 
 HEADING in the root heading of an Org file to create or look
 for. It looks for an existing entry in NAMESPACE or create a new
 one if none. A file is determined based on
 `org-multi-wiki-escape-file-name-fn', unless you explicitly
-specify a FILENAME."
+specify a FILENAME.
+
+When NO-LOG is t, it doesn't record visit to the entry in the
+frecency store.
+
+When LOG-CREATION is t, it prints a message if it creates a
+buffer for a new file.
+
+When NO-DISPLAY is t, it doesn't display the created buffer.
+Instead, it just ensures existence of the file.
+
+This function returns the file buffer of the entry."
   (interactive (let ((namespace (or (and current-prefix-arg
                                          (org-multi-wiki-select-namespace))
                                     org-multi-wiki-current-namespace
@@ -1212,12 +1226,19 @@ specify a FILENAME."
                   (find-file-noselect fpath))))
     (unless existing-buffer
       (org-multi-wiki--setup-new-buffer buf namespace fpath dir))
+    (when (and log-creation new)
+      (message "Created a buffer for a new file: %s"
+               (abbreviate-file-name fpath)))
     (with-current-buffer buf
       (org-multi-wiki-run-mode-hooks)
-      (org-multi-wiki--log-file-visit namespace
-                                      (org-multi-wiki--relative-path
-                                       fpath namespace t)))
-    (funcall org-multi-wiki-display-buffer-fn buf)))
+      (unless no-log
+        (org-multi-wiki--log-file-visit namespace
+                                        (org-multi-wiki--relative-path
+                                         fpath namespace t))))
+    (unless no-display
+      (funcall org-multi-wiki-display-buffer-fn buf))
+    ;; Return the buffer for possible usefulness
+    buf))
 
 (defsubst org-multi-wiki--removal-blocked-p ()
   "Return non-nil if the user must not remove the subtree at point."

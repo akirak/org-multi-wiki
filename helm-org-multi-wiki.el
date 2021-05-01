@@ -112,6 +112,10 @@ for an example, which is the default value."
   "Alist of actions used to insert a link to a heading."
   :type 'alist)
 
+(defcustom helm-org-multi-wiki-insert-ensure-link-target t
+  "Whether to ensure the file of the link target when inserting a link."
+  :type 'boolean)
+
 (defcustom helm-org-multi-wiki-sort 'file-frecency
   "Whether (and how) to sort candidates.
 
@@ -180,8 +184,17 @@ MARKER is the marker to the link target."
 
 NAMESPACE is the namespace in which a new entry will be created,
 and TITLE is the title of the entry."
-  (-> (org-multi-wiki--make-link namespace title :to-file t)
-      (helm-org-multi-wiki--make-link-dwim title)))
+  (let* ((basename (funcall org-multi-wiki-escape-file-name-fn title))
+         (link (org-multi-wiki--make-link namespace basename :to-file t)))
+    (helm-org-multi-wiki--make-link-dwim link title)
+    (when helm-org-multi-wiki-insert-ensure-link-target
+      ;; Save the buffer created by `org-multi-wiki-visit-entry'
+      (with-current-buffer
+          (org-multi-wiki-visit-entry title :namespace namespace
+                                      :no-log t
+                                      :log-creation t
+                                      :no-display t)
+        (save-buffer)))))
 
 (defun helm-org-multi-wiki--link-info-at-point ()
   "Return information on the link at point if any."

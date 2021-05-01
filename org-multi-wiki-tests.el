@@ -54,7 +54,9 @@
 
       (it "appends an acronym when the final word is wrapped in parentheses"
         (let ((result (escape-fn "Time And Relative Dimension In Space (TARDIS)")))
-          (expect result :to-equal "TimeAndRelativeDimensionInSpace_TARDIS")))
+          (expect result :to-equal "TimeAndRelativeDimensionInSpace_TARDIS"))
+        (let ((result (escape-fn "Erlang VM (BEAM)")))
+          (expect result :to-equal "ErlangVM_BEAM")))
 
       (it "returns a string without underscore otherwise"
         (let ((result (escape-fn "Time And Relative Dimension In Space")))

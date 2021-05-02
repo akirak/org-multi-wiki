@@ -1049,7 +1049,7 @@ ORIGIN-NS, if specified, is the namespace of the link orientation."
                                    (org-back-to-heading)
                                    (while (> (org-outline-level) 1)
                                      (re-search-backward org-heading-regexp))
-                                   (cocnat (org-link-display-format
+                                   (concat (org-link-display-format
                                             (org-get-heading t t t t))
                                            "#"))))
               (clean-headline (org-link-display-format headline)))

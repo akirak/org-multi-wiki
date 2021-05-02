@@ -1222,6 +1222,7 @@ This function returns the file buffer of the entry."
                       (setq buffer-file-name fpath)
                       (insert (funcall org-multi-wiki-entry-template-fn heading))
                       (set-auto-mode)
+                      (save-buffer)
                       (current-buffer)))
                   (find-file-noselect fpath))))
     (unless existing-buffer

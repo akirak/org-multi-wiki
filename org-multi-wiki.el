@@ -1318,5 +1318,79 @@ the source file."
            (kill-buffer buf))
          (error err))))))
 
+;;;###autoload
+(cl-defun org-multi-wiki-backlink-view (&key scope namespaces extra-sources)
+  "Display entries containing a backlink to the current entry.
+
+SCOPE must be a symbol which denotes the link target. The
+following values are supported:
+
+  entry: The exact entry at point.
+
+  file: The entire file containing the current entry.
+
+NAMESPACES is a list of symbol.
+
+If EXTRA-SOURCES is non-nil, `org-multi-wiki-extra-files' will be
+searched as well."
+  (interactive (list :scope (if current-prefix-arg
+                                'entry
+                              'file)
+                     :namespaces (-map #'car org-multi-wiki-namespace-list)
+                     :extra-sources t))
+  (assert (derived-mode-p 'org-mode))
+  (assert (not (org-before-first-heading-p)))
+  (let* ((files (append (org-multi-wiki-entry-files namespaces :as-buffers t)
+                        (when extra-sources
+                          (org-multi-wiki--extra-files :as-buffers t))))
+         (heading (org-get-heading t t t t))
+         (regexp (org-multi-wiki--backlink-regexp scope))
+         (query `(link :target ,regexp :regexp-p t)))
+    (org-ql-search files
+      query
+      :title (format "Entries containing a link to %s" heading)
+      :super-groups '((:auto-map org-multi-wiki-map-buffer-group))
+      ;; TODO: Sort by frecency
+      ;; :sort
+      :buffer (format "*org-multi-wiki backlink <%s>*" heading))))
+
+(defun org-multi-wiki-map-buffer-group (item)
+  "Return the buffer name of ITEM for ITEM."
+  (-some->> (or (get-text-property 0 'org-marker item)
+                (get-text-property 0 'org-hd-marker item))
+    (marker-buffer)
+    (buffer-name)))
+
+(defun org-multi-wiki--backlink-regexp (scope)
+  "Return a regexp for links to SCOPE."
+  (let* (ids
+         custom-ids
+         (plist (org-multi-wiki-entry-file-p))
+         (namespace (plist-get plist :namespace))
+         (basename (plist-get plist :basename)))
+    (cl-ecase scope
+      (file (progn
+              (unless plist
+                (user-error "Backlink to a file scope doesn't work if the target is not an wiki entry"))
+              (org-with-wide-buffer
+               (save-excursion
+                 (goto-char (point-min))
+                 (while (re-search-forward org-heading-regexp nil t)
+                   (-some-> (org-entry-get nil "ID")
+                     (push ids)))))))
+      (entry (-some-> (org-entry-get nil "ID")
+               (push ids))))
+    (unless (or plist ids)
+      (error "No ID to the current non-wiki entry"))
+    (rx-to-string `(or ,(when plist
+                          `(and ,(format "wiki:%s:%s"
+                                         ;; TODO: Handle non-basename file names
+                                         namespace basename)
+                                ;; TODO: Add support for headings
+                                ,@(when custom-ids
+                                    `(and "#" (or ,@custom-ids)))))
+                       ,@(when ids
+                           `(and "id:" (or ,@ids)))))))
+
 (provide 'org-multi-wiki)
 ;;; org-multi-wiki.el ends here

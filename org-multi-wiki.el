@@ -699,10 +699,14 @@ and DIR is the root directory of the namespace."
           (expand-file-name (concat basename extension) directory))
         org-multi-wiki-file-extensions))
 
-(defun org-multi-wiki--extra-files ()
+(cl-defun org-multi-wiki--extra-files (&key as-buffers)
   "Expand entries `org-multi-wiki-extra-files'.
 
-This function returns a list of file names."
+If AS-BUFFERS is non-nil, this function returns a list of buffers.
+Otherwise, it returns a list of file names.
+
+It also tries to strip duplicates.
+"
   (cl-flet*
       ((expand-path
         (s)
@@ -717,16 +721,23 @@ This function returns a list of file names."
             (expand-path y)
           (-flatten-n 1 (-map #'expand-path y)))))
     (->> org-multi-wiki-extra-files
-         (-map (lambda (x)
-                 (cl-etypecase x
-                   (string (expand-path x))
-                   (null nil)
-                   (symbol (if (fboundp x)
-                               (funcall x)
-                             (expand-paths (symbol-value x))))
-                   (function (funcall x)))))
-         (-flatten-n 1)
-         (-non-nil))))
+      (-map (lambda (x)
+              (cl-etypecase x
+                (string (expand-path x))
+                (null nil)
+                (symbol (if (fboundp x)
+                            (funcall x)
+                          (expand-paths (symbol-value x))))
+                #'(funcall x))))
+      (-flatten-n 1)
+      (-non-nil)
+      (funcall (lambda (result)
+                 (if as-buffers
+                     (-> (--map (or (find-buffer-visiting it)
+                                    (find-file-noselect it))
+                                result)
+                       (cl-remove-duplicates :test #'eq))
+                   (-uniq result)))))))
 
 (cl-defun org-multi-wiki-link-file-name (file &key namespace dir)
   "Return a file name in an Org link.

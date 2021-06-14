@@ -422,15 +422,6 @@ If this variable is non-nil, `helm-org-multi-wiki-all' will get a
 `helm-org-ql' source for `org-multi-wiki-extra-files'."
   :type 'boolean)
 
-(defclass helm-org-multi-wiki-source-recent-entry (helm-org-multi-wiki-marker-source)
-  ((candidate-transformer
-    :initform (lambda (items)
-                (if helm-org-multi-wiki-recent-heading-limit
-                    (-take (min helm-org-multi-wiki-recent-heading-limit
-                                (length items))
-                           items)
-                  items)))))
-
 (defun helm-org-multi-wiki-recent-entry-candidates (namespaces)
   "Return a list of Helm candidates of recent headings from NAMESPACES."
   (let ((window-width (window-width (helm-window))))

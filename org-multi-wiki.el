@@ -282,7 +282,7 @@ some functions in this package may return duplicates."
   :group 'org-multi-wiki)
 
 (defcustom org-multi-wiki-prefix-link-text t
-  "Whether to prefix the link text with the top-level heading."
+  "Whether to prefix the link text with a heading at the top level."
   :type 'boolean
   :group 'org-multi-wiki)
 
@@ -397,8 +397,8 @@ file name."
 
 ;;;; Modes
 ;;;###autoload
-(define-minor-mode org-multi-wiki-global-mode nil
-  nil nil nil
+(define-minor-mode org-multi-wiki-global-mode
+  "A global minor mode that should be turned on for the package."
   :global t
   :after-hook
   (cond
@@ -419,8 +419,7 @@ file name."
     (cl-delete (assoc "wiki" org-link-parameters) org-link-parameters))))
 
 (define-minor-mode org-multi-wiki-mode
-  "Minor mode that should be activated in all wiki buffers."
-  nil nil nil)
+  "Minor mode that should be activated in all wiki buffers.")
 
 ;;;; Configuration helpers
 ;;;###autoload
@@ -712,8 +711,7 @@ and DIR is the root directory of the namespace."
 If AS-BUFFERS is non-nil, this function returns a list of buffers.
 Otherwise, it returns a list of file names.
 
-It also tries to strip duplicates.
-"
+It also tries to strip duplicates."
   (cl-flet*
       ((expand-path
         (s)

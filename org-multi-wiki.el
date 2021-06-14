@@ -1358,28 +1358,35 @@ top-level ancestor of the current entry."
   (assert (not (org-before-first-heading-p)))
   (let* ((files (org-multi-wiki-entry-files namespaces :as-buffers t
                                             :extra-files extra-files))
-         (heading (org-get-heading t t t t))
-         (regexp (org-multi-wiki--backlink-regexp scope))
-         (tag (org-entry-get (when (eq scope 'file)
-                               (save-excursion
-                                 (org-with-wide-buffer
-                                  (unless (= 1 (org-reduced-level (org-outline-level)))
-                                    (re-search-backward (rx bol (* space) "*" space) nil t)))))
-                             "MULTI_WIKI_MATCH_TAG"))
-         (query `(or ,@(-non-nil
-                        (list
-                         (when tag
-                           `(and (tags ,tag)
-                                 ;; Skip subtrees
-                                 (not (ancestors (tags ,tag)))))
-                         (when regexp
-                           `(link :target ,regexp :regexp-p t)))))))
+         (heading (org-get-heading t t t t)))
     (org-ql-search files
-      query
+      (org-multi-wiki-backlink-query scope)
       :super-groups super-groups
       :sort sort
       :title (format "Entries containing a link to %s" heading)
       :buffer (format "*org-multi-wiki backlink <%s>*" heading))))
+
+(defun org-multi-wiki-backlink-query (scope)
+  "Build an Org Query expression for finding backlinks to SCOPE.
+
+See `org-multi-wiki-backlink-view' for supported scopes."
+  (assert (derived-mode-p 'org-mode))
+  (assert (not (org-before-first-heading-p)))
+  (let ((regexp (org-multi-wiki--backlink-regexp scope))
+        (tag (org-entry-get (when (eq scope 'file)
+                              (save-excursion
+                                (org-with-wide-buffer
+                                 (unless (= 1 (org-reduced-level (org-outline-level)))
+                                   (re-search-backward (rx bol (* space) "*" space) nil t)))))
+                            "MULTI_WIKI_MATCH_TAG")))
+    `(or ,@(-non-nil
+            (list
+             (when tag
+               `(and (tags ,tag)
+                     ;; Skip subtrees
+                     (not (ancestors (tags ,tag)))))
+             (when regexp
+               `(link :target ,regexp :regexp-p t)))))))
 
 (defun org-multi-wiki--backlink-regexp (scope)
   "Return a regexp for links to SCOPE."

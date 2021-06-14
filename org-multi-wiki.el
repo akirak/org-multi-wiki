@@ -554,7 +554,9 @@ explicitly give it as DIR."
     (plist-get plist prop)))
 
 ;;;###autoload
-(cl-defun org-multi-wiki-entry-files (&optional namespaces &key as-buffers sort)
+(cl-defun org-multi-wiki-entry-files (&optional namespaces
+                                                &key as-buffers sort
+                                                extra-files)
   "Get a list of Org files in namespaces.
 
 NAMESPACES is a list of namespaces. If it is not specified,
@@ -562,22 +564,27 @@ NAMESPACES is a list of namespaces. If it is not specified,
 
 If AS-BUFFERS is non-nil, it returns a list of buffers.
 
-If SORT is non-nil, the result will be sorted by frecency."
+If SORT is non-nil, the result will be sorted by frecency.
+
+If EXTRA-FILES is non-nil, files from
+`org-multi-wiki-extra-files' are appended to the result."
   (let ((result (->> (cl-etypecase namespaces
                        (symbol (list (or namespaces org-multi-wiki-current-namespace)))
                        (list namespaces))
-                     (-map (lambda (namespace)
-                             (org-multi-wiki-entry-files-1 namespace
-                               :as-buffers as-buffers
-                               :frecency sort)))
-                     (-flatten-n 1))))
-    (if sort
-        (pcase-let ((`(,xs ,ys) (-separate (pcase-lambda (`(,score . ,_))
-                                             (and score (> score 0)))
-                                           result)))
-          (-map #'cdr (append (-sort (-on #'> #'car) xs)
-                              ys)))
-      result)))
+                  (-map (lambda (namespace)
+                          (org-multi-wiki-entry-files-1 namespace
+                            :as-buffers as-buffers
+                            :frecency sort)))
+                  (-flatten-n 1))))
+    (append (if sort
+                (pcase-let ((`(,xs ,ys) (-separate (pcase-lambda (`(,score . ,_))
+                                                     (and score (> score 0)))
+                                                   result)))
+                  (-map #'cdr (append (-sort (-on #'> #'car) xs)
+                                      ys)))
+              result)
+            (when extra-files
+              (org-multi-wiki--extra-files :as-buffers as-buffers)))))
 
 (cl-defun org-multi-wiki-entry-files-1 (namespace &key as-buffers frecency)
   "Get a list of Org files in a namespace.
@@ -1319,7 +1326,8 @@ the source file."
          (error err))))))
 
 ;;;###autoload
-(cl-defun org-multi-wiki-backlink-view (&key scope namespaces extra-sources)
+(cl-defun org-multi-wiki-backlink-view (&key scope namespaces extra-files
+                                             super-groups sort)
   "Display entries containing a backlink to the current entry.
 
 SCOPE must be a symbol which denotes the link target. The
@@ -1331,8 +1339,10 @@ following values are supported:
 
 NAMESPACES is a list of symbol.
 
-If EXTRA-SOURCES is non-nil, `org-multi-wiki-extra-files' will be
+If EXTRA-FILES is non-nil, `org-multi-wiki-extra-files' will be
 searched as well.
+
+SUPER-GROUPS and SORT are passed to `org-ql-search', which see.
 
 It also displays entries having a tag defined as
 \"MULTI_WIKI_MATCH_TAG\" property of the entry. If the scope is
@@ -1343,12 +1353,11 @@ top-level ancestor of the current entry."
                                 'entry
                               'file)
                      :namespaces (-map #'car org-multi-wiki-namespace-list)
-                     :extra-sources t))
+                     :extra-files t))
   (assert (derived-mode-p 'org-mode))
   (assert (not (org-before-first-heading-p)))
-  (let* ((files (append (org-multi-wiki-entry-files namespaces :as-buffers t)
-                        (when extra-sources
-                          (org-multi-wiki--extra-files :as-buffers t))))
+  (let* ((files (org-multi-wiki-entry-files namespaces :as-buffers t
+                                            :extra-files extra-files))
          (heading (org-get-heading t t t t))
          (regexp (org-multi-wiki--backlink-regexp scope))
          (tag (org-entry-get (when (eq scope 'file)
@@ -1367,18 +1376,10 @@ top-level ancestor of the current entry."
                            `(link :target ,regexp :regexp-p t)))))))
     (org-ql-search files
       query
+      :super-groups super-groups
+      :sort sort
       :title (format "Entries containing a link to %s" heading)
-      :super-groups '((:auto-map org-multi-wiki-map-buffer-group))
-      ;; TODO: Sort by frecency
-      ;; :sort
       :buffer (format "*org-multi-wiki backlink <%s>*" heading))))
-
-(defun org-multi-wiki-map-buffer-group (item)
-  "Return the buffer name of ITEM for ITEM."
-  (-some->> (or (get-text-property 0 'org-marker item)
-                (get-text-property 0 'org-hd-marker item))
-    (marker-buffer)
-    (buffer-name)))
 
 (defun org-multi-wiki--backlink-regexp (scope)
   "Return a regexp for links to SCOPE."

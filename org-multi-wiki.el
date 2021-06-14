@@ -1364,10 +1364,19 @@ searched as well."
 (defun org-multi-wiki--backlink-regexp (scope)
   "Return a regexp for links to SCOPE."
   (let* (ids
-         custom-ids
          (plist (org-multi-wiki-entry-file-p))
          (namespace (plist-get plist :namespace))
-         (basename (plist-get plist :basename)))
+         (basename (plist-get plist :basename))
+         patterns)
+    (when plist
+      ;; TODO: Handle non-basename file names
+      (let ((prefix (format "wiki:%s:%s" namespace basename)))
+        (cl-ecase scope
+          (file (push prefix patterns))
+          (entry (progn
+                   (when-let (custom-id (org-entry-get nil "CUSTOM_ID"))
+                     (push (concat prefix "::#" custom-id) patterns))
+                   (push (concat prefix "::*" (org-get-heading t t t t)) patterns))))))
     (cl-ecase scope
       (file (progn
               (unless plist
@@ -1380,17 +1389,10 @@ searched as well."
                      (push ids)))))))
       (entry (-some-> (org-entry-get nil "ID")
                (push ids))))
-    (unless (or plist ids)
-      (error "No ID to the current non-wiki entry"))
-    (rx-to-string `(or ,(when plist
-                          `(and ,(format "wiki:%s:%s"
-                                         ;; TODO: Handle non-basename file names
-                                         namespace basename)
-                                ;; TODO: Add support for headings
-                                ,@(when custom-ids
-                                    `(and "#" (or ,@custom-ids)))))
-                       ,@(when ids
-                           `(and "id:" (or ,@ids)))))))
+    (when ids
+      (push `(and "id:" (or ,@ids)) patterns))
+    (when patterns
+      (rx-to-string `(or ,@patterns)))))
 
 (provide 'org-multi-wiki)
 ;;; org-multi-wiki.el ends here

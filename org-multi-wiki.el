@@ -1328,6 +1328,12 @@ the source file."
                                              super-groups sort)
   "Display entries containing a backlink to the current entry.
 
+This is an experimental feature. Maybe I will drop this command
+in the future in favor of a transient command. I would recommend
+you to use `org-multi-wiki-backlink-query' and
+`org-multi-wiki-entry-files' for implemeting your own command,
+which are likely to supported in future releases.
+
 SCOPE must be a symbol which denotes the link target. The
 following values are supported:
 

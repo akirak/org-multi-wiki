@@ -1332,7 +1332,13 @@ following values are supported:
 NAMESPACES is a list of symbol.
 
 If EXTRA-SOURCES is non-nil, `org-multi-wiki-extra-files' will be
-searched as well."
+searched as well.
+
+It also displays entries having a tag defined as
+\"MULTI_WIKI_MATCH_TAG\" property of the entry. If the scope is
+an entry, the property should be defined as a property of the
+exact entry. If the scope is a file, it should be defined in the
+top-level ancestor of the current entry."
   (interactive (list :scope (if current-prefix-arg
                                 'entry
                               'file)
@@ -1345,7 +1351,20 @@ searched as well."
                           (org-multi-wiki--extra-files :as-buffers t))))
          (heading (org-get-heading t t t t))
          (regexp (org-multi-wiki--backlink-regexp scope))
-         (query `(link :target ,regexp :regexp-p t)))
+         (tag (org-entry-get (when (eq scope 'file)
+                               (save-excursion
+                                 (org-with-wide-buffer
+                                  (unless (= 1 (org-reduced-level (org-outline-level)))
+                                    (re-search-backward (rx bol (* space) "*" space) nil t)))))
+                             "MULTI_WIKI_MATCH_TAG"))
+         (query `(or ,@(-non-nil
+                        (list
+                         (when tag
+                           `(and (tags ,tag)
+                                 ;; Skip subtrees
+                                 (not (ancestors (tags ,tag)))))
+                         (when regexp
+                           `(link :target ,regexp :regexp-p t)))))))
     (org-ql-search files
       query
       :title (format "Entries containing a link to %s" heading)

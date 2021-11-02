@@ -42,7 +42,7 @@
           (expect result :to-equal "ThisIsKnife")))
 
       (it "eliminates most symbols not specified in the above"
-        (let ((result (escape-fn "123@#!([]<\\|hello")))
+        (let ((result (escape-fn "123@#!([]<\\|hello`'‘’‘“”\"")))
           (expect result :to-equal "123hello")))
 
       (it "Don't eliminate slash"

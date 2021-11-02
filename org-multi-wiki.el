@@ -341,7 +341,7 @@ The value is a list of a namespace symbol and a file name.")
   "Escape HEADING suitable for use in file name."
   (cl-labels ((filename-escape
                (str)
-               (s-replace-regexp (rx (not (any alnum "-._" nonascii))) "" str)))
+               (s-replace-regexp (rx (not (any alnum "-._" word))) "" str)))
     (save-match-data
       (-let* (((_ dir name) (s-match (rx bol
                                          (group (* (*? anything) "/"))

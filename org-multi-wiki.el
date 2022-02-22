@@ -964,6 +964,47 @@ belong to one of them."
       (when pos (goto-char pos))
       (org-multi-wiki--log-marker-visit (point-marker)))))
 
+(defun org-multi-wiki-replace-with-id-links (namespace)
+  "Replace links to NAMESPACE with id links."
+  (interactive (list (intern (completing-read "Namespace: "
+                                              org-multi-wiki-namespace-list))))
+  (let (result)
+    (dolist (buf (org-multi-wiki-entry-files (mapcar #'car org-multi-wiki-namespace-list)
+                                             :as-buffers t :extra-files t))
+      (with-current-buffer buf
+        (org-with-wide-buffer
+         (goto-char (point-min))
+         (while (re-search-forward org-link-any-re nil t)
+           (let ((start (car (match-data 0))))
+             (when-let (href (save-match-data (match-string 2)))
+               (when (string-match (rx bol "wiki:" (group (+ anything))) href)
+                 (let ((link (match-string 1 href)))
+                   (push (append (list :origin-start start
+                                       :origin-buffer buf
+                                       :link link)
+                                 (org-multi-wiki--resolve-link link))
+                         result)))))))))
+    (let ((links (thread-last result
+                   (cl-remove-if-not (lambda (plist)
+                                       (eq namespace (plist-get plist :namespace)))))))
+      (when links
+        (save-window-excursion
+          (dolist (plist links)
+            (org-multi-wiki-follow-link (plist-get plist :link))
+            (when (plist-get plist :file)
+              (goto-char (point-min))
+              (re-search-forward org-heading-regexp nil t))
+            (let* ((org-id-link-to-org-use-id t)
+                   (new-id (org-id-get-create)))
+              (with-current-buffer (plist-get plist :origin-buffer)
+                (org-with-wide-buffer
+                 (goto-char (plist-get plist :origin-start))
+                 (if (looking-at org-link-any-re)
+                     (let ((text (match-string 3)))
+                       (apply #'delete-region (-take 2 (match-data)))
+                       (insert (org-link-make-string (concat "id:" new-id)
+                                                     text)))))))))))))
+
 (defun org-multi-wiki--resolve-link (link)
   "Resolve LINK."
   (when (string-match (rx bol (group-n 1 (* (any alnum "-")))

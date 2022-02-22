@@ -42,12 +42,25 @@
           (expect result :to-equal "ThisIsKnife")))
 
       (it "eliminates most symbols not specified in the above"
-        (let ((result (escape-fn "123@#!([]<\\|hello")))
+        (let ((result (escape-fn "123@#!([]<\\|hello`'‘’‘“”\"")))
           (expect result :to-equal "123hello")))
 
       (it "Don't eliminate slash"
         (let ((result (escape-fn "hello/john connor")))
           (expect result :to-equal "hello/JohnConnor")))))
+
+  (describe "org-multi-wiki-escape-file-name-camelcase-2"
+    (cl-flet ((escape-fn (heading) (org-multi-wiki-escape-file-name-camelcase-2 heading)))
+
+      (it "appends an acronym when the final word is wrapped in parentheses"
+        (let ((result (escape-fn "Time And Relative Dimension In Space (TARDIS)")))
+          (expect result :to-equal "TimeAndRelativeDimensionInSpace_TARDIS"))
+        (let ((result (escape-fn "Erlang VM (BEAM)")))
+          (expect result :to-equal "ErlangVM_BEAM")))
+
+      (it "returns a string without underscore otherwise"
+        (let ((result (escape-fn "Time And Relative Dimension In Space")))
+          (expect result :to-equal "TimeAndRelativeDimensionInSpace")))))
 
   (describe "org-multi-wiki-default-custom-id-escape-fn"
     (cl-flet ((escape-fn (heading) (org-multi-wiki-default-custom-id-escape-fn heading)))
@@ -73,6 +86,16 @@
         (let ((result (template "Hello")))
           (expect result :to-equal "* Hello\n"))))))
 
+(describe "org-multi-wiki--org-extension"
+  (it "returns the extension of an Org file"
+    (expect (org-multi-wiki--org-extension "sample.org")
+            :to-equal ".org")
+    (expect (org-multi-wiki--org-extension "sample.org.gpg")
+            :to-equal ".org.gpg"))
+  (it "returns nil for other files"
+    (expect (org-multi-wiki--org-extension "sample.txt")
+            :to-be nil)))
+
 (describe "org-multi-wiki--strip-org-extension"
   (it "strips .org"
     (expect (org-multi-wiki--strip-org-extension "sample.org")
@@ -85,3 +108,23 @@
             :to-equal "sample.txt")
     (expect (org-multi-wiki--strip-org-extension "hello.org.nonorg")
             :to-equal "hello.org.nonorg")))
+
+(describe "org-multi-wiki--extra-files"
+  (it "returns a flat list of file names"
+    ;; Note that I am going to remove notes.org in the future, so I
+    ;; will have to update this test case as well then.
+    (expect (let ((org-directory ".")
+                  (org-agenda-files (list "."))
+                  (org-multi-wiki-extra-files
+                   '("."
+                     "NON-EXISTENT-FILE"
+                     "NON-EXISTENT-DIR/"
+                     org-directory
+                     org-agenda-files)))
+              (org-multi-wiki--extra-files))
+            :to-equal
+            (->> (-map (lambda (f)
+                         (expand-file-name f default-directory))
+                       '("README.org" "notes.org"))
+                 (-repeat 3)
+                 (-flatten-n 1)))))

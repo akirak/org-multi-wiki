@@ -941,6 +941,31 @@ belong to one of them."
 ;;;###autoload
 (defun org-multi-wiki-follow-link (link)
   "Follow a wiki LINK."
+  (let ((plist (org-multi-wiki--resolve-link link)))
+    (cond
+     ((plist-get plist :file) (find-file (plist-get plist :file)))
+     ((plist-get plist :marker) (org-goto-marker-or-bmk (plist-get plist :marker)))
+     (t (org-multi-wiki-visit-entry (plist-get plist :basename)
+                                    :namespace (plist-get plist :namespace))))
+    (org-multi-wiki-run-mode-hooks)
+    (let ((pos (or (and (plist-get plist :custom-id)
+                        (or (car-safe (org-ql-select (current-buffer)
+                                        `(property "CUSTOM_ID"
+                                                   ,(plist-get plist :custom-id))
+                                        :action '(point)))
+                            (user-error "Cannot find an entry with CUSTOM_ID %s"
+                                        (plist-get plist :custom-id))))
+                   (and (plist-get plist :headline)
+                        (or (car-safe (org-ql-select (current-buffer)
+                                        `(heading ,(plist-get plist :headline))
+                                        :action '(point)))
+                            (user-error "Cannot find an entry with heading %s"
+                                        (plist-get plist :headline)))))))
+      (when pos (goto-char pos))
+      (org-multi-wiki--log-marker-visit (point-marker)))))
+
+(defun org-multi-wiki--resolve-link (link)
+  "Resolve LINK."
   (when (string-match (rx bol (group-n 1 (* (any alnum "-")))
                           ":" (group-n 2 (+? anything))
                           (optional "::"
@@ -965,29 +990,15 @@ belong to one of them."
                                  (org-multi-wiki-expand-org-file-names
                                   root
                                   (funcall org-multi-wiki-escape-file-name-fn basename))))))
-      (cond
-       (file (find-file file))
-       (t (let ((marker (and headline
-                             (car-safe (org-ql-select (org-multi-wiki-entry-files id)
-                                         `(and (level 1)
-                                               (heading ,headline))
-                                         :action '(point-marker))))))
-            (if marker
-                (org-goto-marker-or-bmk marker)
-              (org-multi-wiki-visit-entry basename :namespace id)))))
-      (org-multi-wiki-run-mode-hooks)
-      (let ((pos (or (and custom-id
-                          (or (car-safe (org-ql-select (current-buffer)
-                                          `(property "CUSTOM_ID" ,custom-id)
-                                          :action '(point)))
-                              (user-error "Cannot find an entry with CUSTOM_ID %s" custom-id)))
-                     (and headline
-                          (or (car-safe (org-ql-select (current-buffer)
-                                          `(heading ,headline)
-                                          :action '(point)))
-                              (user-error "Cannot find an entry with heading %s" headline))))))
-        (when pos (goto-char pos))
-        (org-multi-wiki--log-marker-visit (point-marker))))))
+      (list :headline headline
+            :namespace id
+            :basename basename
+            :file file
+            :marker (when headline
+                      (car-safe (org-ql-select (org-multi-wiki-entry-files id)
+                                  `(and (level 1)
+                                        (heading ,headline))
+                                  :action '(point-marker))))))))
 
 ;;;###autoload
 (defun org-multi-wiki-store-link ()

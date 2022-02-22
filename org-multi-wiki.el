@@ -983,7 +983,7 @@ belong to one of them."
            (info (assoc id org-multi-wiki-namespace-list #'eq))
            (root (if info
                      (nth 1 info)
-                   (user-error "Wiki directory for %s is undefined" id)))
+                   (user-error "Wiki directory for %s is undefined in %s" id link)))
            (file (or (cl-find-if #'file-exists-p
                                  (org-multi-wiki-expand-org-file-names root basename))
                      (cl-find-if #'file-exists-p

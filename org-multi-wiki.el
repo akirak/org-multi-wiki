@@ -977,7 +977,7 @@ belong to one of them."
                    (save-match-data
                      (org-multi-wiki--current-namespace))
                  (intern (match-string 1 link))))
-           (basename (match-string 2 link))
+           (basename (substring-no-properties (match-string 2 link)))
            (custom-id (match-string 3 link))
            (headline (match-string 4 link))
            (info (assoc id org-multi-wiki-namespace-list #'eq))
